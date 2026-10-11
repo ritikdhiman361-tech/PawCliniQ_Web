@@ -1,0 +1,15 @@
+{
+  "name": "pawcliniq",
+  "private": true,
+  "description": "PawCliniQ — vet appointment booking. One service: Express serves the API and the built React app.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "install:all": "npm ci --include=dev --prefix Frontend && npm ci --include=dev --prefix Backend",
+    "build": "npm run install:all && npm run build --prefix Frontend && npm run db:deploy --prefix Backend",
+    "start": "npm start --prefix Backend",
+    "dev:api": "npm run dev --prefix Backend",
+    "dev:web": "npm run dev --prefix Frontend"
+  }
+}

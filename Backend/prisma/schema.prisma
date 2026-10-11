@@ -1,0 +1,148 @@
+// PawCliniQ database schema. Run `npm run db:migrate` after editing.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  user
+  admin
+}
+
+enum ServiceType {
+  checkup
+  vaccination
+  grooming
+  emergency
+}
+
+enum BookingStatus {
+  confirmed
+  cancelled
+}
+
+model User {
+  id           String        @id @default(uuid()) @db.Uuid
+  name         String
+  email        String        @unique // stored lowercased
+  mobile       String?
+  passwordHash String        @map("password_hash")
+  role         Role          @default(user)
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+  pets         Pet[]
+  bookings     Booking[]
+  bookingDraft BookingDraft?
+
+  @@map("users")
+}
+
+model Pet {
+  id        String    @id @default(uuid()) @db.Uuid
+  ownerId   String    @map("owner_id") @db.Uuid
+  owner     User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name      String
+  species   String
+  breed     String
+  gender    String?
+  age       Decimal?  @db.Decimal(4, 1) // years; 0.5 = 6 months
+  weight    Decimal?  @db.Decimal(5, 2) // kg
+  notes     String    @default("")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  bookings  Booking[]
+
+  // One owner can't have two pets with the same name (case-insensitive,
+  // enforced by the pets_owner_name_key index in the init migration).
+  @@index([ownerId])
+  @@map("pets")
+}
+
+model Clinic {
+  id          String         @id // readable slug, e.g. "clinic-koramangala"
+  name        String
+  location    String
+  address     String
+  phone       String
+  email       String
+  rating      Decimal        @db.Decimal(2, 1)
+  hours       String
+  description String
+  services    ServiceType[]
+  vets        Vet[]
+  bookings    Booking[]
+  drafts      BookingDraft[]
+
+  @@map("clinics")
+}
+
+model Vet {
+  id          String         @id // readable slug, e.g. "vet-ananya"
+  clinicId    String         @map("clinic_id")
+  clinic      Clinic         @relation(fields: [clinicId], references: [id])
+  name        String
+  specialty   String
+  experience  Int // years
+  rating      Decimal        @db.Decimal(2, 1)
+  workingDays Int[]          @map("working_days") // JS weekday numbers, 0 = Sunday
+  bookings    Booking[]
+  drafts      BookingDraft[]
+
+  @@index([clinicId])
+  @@map("vets")
+}
+
+model Booking {
+  id          String        @id @default(uuid()) @db.Uuid
+  userId      String        @map("user_id") @db.Uuid
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Nullable: deleting a pet profile keeps its appointment history.
+  petId       String?       @map("pet_id") @db.Uuid
+  pet         Pet?          @relation(fields: [petId], references: [id], onDelete: SetNull)
+  // Pet details as they were at booking time.
+  petName     String        @map("pet_name")
+  petType     String        @map("pet_type")
+  petBreed    String        @map("pet_breed")
+  clinicId    String        @map("clinic_id")
+  clinic      Clinic        @relation(fields: [clinicId], references: [id])
+  vetId       String        @map("vet_id")
+  vet         Vet           @relation(fields: [vetId], references: [id])
+  serviceType ServiceType   @map("service_type")
+  startsAt    DateTime      @map("starts_at") @db.Timestamptz
+  notes       String        @default("")
+  status      BookingStatus @default(confirmed)
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  // No double-booking: one active booking per vet per slot is enforced by
+  // the bookings_one_per_slot partial unique index in the init migration.
+  @@index([userId])
+  @@index([vetId, startsAt])
+  @@map("bookings")
+}
+
+// The booking a user is part-way through (pet details → clinic → vet →
+// time). One per user, filled in step by step and deleted once the booking
+// is made. Lives here rather than in the browser so it follows the account.
+model BookingDraft {
+  userId      String       @id @map("user_id") @db.Uuid
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Pet details, all set together (or all null).
+  petName     String?      @map("pet_name")
+  petType     String?      @map("pet_type")
+  petBreed    String?      @map("pet_breed")
+  serviceType ServiceType? @map("service_type")
+  notes       String       @default("")
+  clinicId    String?      @map("clinic_id")
+  clinic      Clinic?      @relation(fields: [clinicId], references: [id], onDelete: SetNull)
+  vetId       String?      @map("vet_id")
+  vet         Vet?         @relation(fields: [vetId], references: [id], onDelete: SetNull)
+  updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("booking_drafts")
+}

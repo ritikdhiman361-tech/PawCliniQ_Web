@@ -1,0 +1,20 @@
+# Render Blueprint: one web service serving the API and the React app.
+# New → Blueprint → pick this repo, then fill in the database URLs.
+services:
+  - type: web
+    name: pawcliniq
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL # Neon direct URL (migrations)
+        sync: false
+      - key: DATABASE_URL_POOLED # Neon pooled URL (app queries)
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true

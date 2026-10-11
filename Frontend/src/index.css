@@ -1,0 +1,152 @@
+@import "tailwindcss";
+
+/* ---------- Global base styles ---------- */
+
+html,
+body,
+#root {
+  margin: 0;
+  min-width: 100%;
+  min-height: 100%;
+  background-color: #ffffff;
+  color: #111827;
+}
+
+.BookingsPage {
+  height: fit-content;
+}
+
+/* ---------- Entrance / feedback keyframes (existing) ---------- */
+
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeOutDown {
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+}
+
+@keyframes popIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+
+  60% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes wiggle {
+  0%,
+  100% {
+    transform: rotate(-6deg);
+  }
+
+  50% {
+    transform: rotate(6deg);
+  }
+}
+
+/* ---------- Ambient / floating motion ---------- */
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+
+  50% {
+    transform: translateY(-18px) rotate(1.5deg);
+  }
+}
+
+@keyframes blobFloat {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  33% {
+    transform: translate(4%, -6%) scale(1.12);
+  }
+
+  66% {
+    transform: translate(-5%, 4%) scale(0.92);
+  }
+}
+
+@keyframes blobFloatReverse {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  33% {
+    transform: translate(-6%, 5%) scale(0.9);
+  }
+
+  66% {
+    transform: translate(5%, -4%) scale(1.1);
+  }
+}
+
+@keyframes gridPan {
+  from {
+    background-position: 0 0;
+  }
+
+  to {
+    background-position: 64px 64px;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+/* ---------- Reusable helpers ---------- */
+
+.bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(180, 83, 9, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(180, 83, 9, 0.08) 1px, transparent 1px);
+
+  background-size: 64px 64px;
+  animation: gridPan 12s linear infinite;
+}
+
+.blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(48px);
+  pointer-events: none;
+}
+
+.shimmer-bg {
+  background-size: 220% 100%;
+  animation: shimmer 2.4s linear infinite;
+}
