@@ -33,6 +33,8 @@ const clinicSchema = z.object({
   slotMinutes: z.number().int().min(10).max(120),
   homeVisits: z.boolean(),
   active: z.boolean(),
+}).refine((c) => c.openTime !== c.closeTime, {
+  message: 'Opening and closing times are the same. For a 24-hour clinic, tick "Open 24 hours".',
 });
 
 const vetSchema = z
@@ -48,6 +50,9 @@ const vetSchema = z
   })
   .refine((v) => (v.startTime === null) === (v.endTime === null), {
     message: "Set both shift times, or leave both empty to use the clinic's hours.",
+  })
+  .refine((v) => v.startTime === null || v.startTime !== v.endTime, {
+    message: "The shift starts and ends at the same time. Choose a different end time.",
   });
 
 const staffSchema = z.object({

@@ -63,26 +63,31 @@ async function main() {
     console.warn("SEED_ADMIN_PASSWORD not set — skipping admin account.");
   }
 
-  const demo = await prisma.user.upsert({
-    where: { email: DEMO_USER.email },
-    create: {
-      name: DEMO_USER.name,
-      email: DEMO_USER.email,
-      mobile: DEMO_USER.mobile,
-      passwordHash: await bcrypt.hash(DEMO_USER.password, 10),
-    },
-    update: {},
-  });
-
-  const { name, species, breed, gender, age, weight, notes } = DEMO_PET;
-  const hasPet = await prisma.pet.findFirst({ where: { ownerId: demo.id, name } });
-  if (!hasPet) {
-    await prisma.pet.create({
-      data: { ownerId: demo.id, name, species, breed, gender, age, weight, notes },
+  // A demo pet-owner account for local testing; skipped unless a password
+  // is set, so production never gets a guessable login.
+  const demoPassword = process.env.SEED_DEMO_PASSWORD;
+  if (demoPassword) {
+    const demo = await prisma.user.upsert({
+      where: { email: DEMO_USER.email },
+      create: {
+        name: DEMO_USER.name,
+        email: DEMO_USER.email,
+        mobile: DEMO_USER.mobile,
+        passwordHash: await bcrypt.hash(demoPassword, 10),
+      },
+      update: {},
     });
+
+    const { name, species, breed, gender, age, weight, notes } = DEMO_PET;
+    const hasPet = await prisma.pet.findFirst({ where: { ownerId: demo.id, name } });
+    if (!hasPet) {
+      await prisma.pet.create({
+        data: { ownerId: demo.id, name, species, breed, gender, age, weight, notes },
+      });
+    }
   }
 
-  console.log(`Seeded ${CLINICS.length} clinics, ${VETS.length} vets, demo + admin users.`);
+  console.log(`Seeded ${CLINICS.length} clinics, ${VETS.length} vets and the admin user.`);
 }
 
 main()

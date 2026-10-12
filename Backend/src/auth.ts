@@ -64,6 +64,15 @@ export const requireUser = (req: { user?: SessionUser }) => {
   return req.user;
 };
 
+// Booking and pet profiles are for pet-owner accounts; clinic staff and
+// admins have their own tools.
+export const requireOwner: RequestHandler = (req, _res, next) => {
+  if (requireUser(req).role !== "user") {
+    throw new HttpError(403, "Only pet-owner accounts can book appointments or manage pets.");
+  }
+  next();
+};
+
 export const requireAdmin: RequestHandler = (req, _res, next) => {
   if (requireUser(req).role !== "admin") throw new HttpError(403, "Admins only.");
   next();

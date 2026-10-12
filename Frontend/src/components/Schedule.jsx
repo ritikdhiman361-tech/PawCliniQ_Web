@@ -21,13 +21,17 @@ import {
 
 const DAYS_AHEAD = 14;
 
-// The vet's working days over the next two weeks.
-const getAvailableDates = (vetDays) => {
+// The vet's working days over the next two weeks, leaving out today once
+// all of today's slots have passed.
+const getAvailableDates = (vet) => {
   const dates = [];
-  const today = new Date();
+  const now = new Date();
   for (let i = 0; i < DAYS_AHEAD; i++) {
-    const day = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
-    if (vetDays.includes(day.getDay())) dates.push(day);
+    const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
+    if (!vet.days.includes(day.getDay())) continue;
+    const key = toDateKey(day);
+    if (i === 0 && !vet.slots.some((slot) => toDateTime(key, slot) > now)) continue;
+    dates.push(day);
   }
   return dates;
 };
@@ -39,12 +43,22 @@ const hourOf = (slot) => {
 };
 
 const PERIODS = [
-  { name: "Early morning", icon: "🌙", until: 6 },
+  { name: "After midnight", icon: "🌙", until: 6 },
   { name: "Morning", icon: "🌤️", until: 12 },
   { name: "Afternoon", icon: "☀️", until: 17 },
   { name: "Evening", icon: "🌇", until: 21 },
   { name: "Night", icon: "🌙", until: 24 },
 ];
+
+// "2026-10-13" → "Late night of Mon 12 Oct, going into Tue 13 Oct." Slots
+// after midnight belong to the chosen date, which owners can misread as the
+// following night.
+const nightBefore = (dateKey) => {
+  const [y, m, d] = dateKey.split("-").map(Number);
+  const fmt = (day) =>
+    day.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+  return `Late night of ${fmt(new Date(y, m - 1, d - 1))}, going into ${fmt(new Date(y, m - 1, d))}.`;
+};
 
 // The vet's slots (from the server, in day order) grouped for display;
 // empty periods are left out.
@@ -70,7 +84,7 @@ function Schedule({ draft }) {
   const navigate = useNavigate();
 
   const availableDates = useMemo(
-    () => (draft.vet ? getAvailableDates(draft.vet.days) : []),
+    () => (draft.vet ? getAvailableDates(draft.vet) : []),
     [draft.vet],
   );
 
@@ -239,6 +253,11 @@ function Schedule({ draft }) {
               {slotGroups.map(({ name, icon, slots }) => (
                 <div key={name}>
                   <Label icon={icon}>{name}</Label>
+                  {name === "After midnight" && (
+                    <p className="text-xs text-amber-700 -mt-1 mb-2">
+                      {nightBefore(date)}
+                    </p>
+                  )}
                   <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                     {slots.map((slot) => {
                       const isDisabled = isSlotUnavailable(slot);

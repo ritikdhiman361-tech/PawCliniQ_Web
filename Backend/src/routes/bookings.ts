@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { requireAuth, requireUser } from "../auth.ts";
+import { requireAuth, requireOwner, requireUser } from "../auth.ts";
 import { prisma } from "../db.ts";
 import type { User } from "../generated/prisma/client.ts";
 import { HttpError, isUniqueViolation, isUuid, parse } from "../http.ts";
@@ -10,6 +10,7 @@ import {
   BOOKING_WINDOW_DAYS,
   fromInstant,
   istDatePlus,
+  isRealDate,
   toInstant,
   vetSlots,
   weekdayOf,
@@ -67,9 +68,18 @@ const createSchema = z.object({
   homeAddress: z.string().trim().max(300, "Address is too long.").optional().default(""),
 });
 
-bookingsRouter.post("/", async (req, res) => {
+bookingsRouter.post("/", requireOwner, async (req, res) => {
   const user = requireUser(req);
   const input = parse(createSchema, req.body);
+
+  // The date itself first, so the message says what's actually wrong.
+  if (!isRealDate(input.date)) throw new HttpError(400, "Please choose a valid date.");
+  if (input.date < istDatePlus(0)) {
+    throw new HttpError(400, "That date has already passed. Please pick another.");
+  }
+  if (input.date >= istDatePlus(BOOKING_WINDOW_DAYS)) {
+    throw new HttpError(400, `Bookings open ${BOOKING_WINDOW_DAYS} days in advance.`);
+  }
 
   const vet = await prisma.vet.findUnique({
     where: { id: input.vetId },
@@ -98,9 +108,6 @@ bookingsRouter.post("/", async (req, res) => {
   const startsAt = toInstant(input.date, input.time);
   if (startsAt <= new Date()) {
     throw new HttpError(400, "That time has already passed. Please pick another.");
-  }
-  if (input.date >= istDatePlus(BOOKING_WINDOW_DAYS)) {
-    throw new HttpError(400, `Bookings open ${BOOKING_WINDOW_DAYS} days in advance.`);
   }
 
   try {

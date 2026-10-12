@@ -21,7 +21,7 @@ Needs Node 22+ and a Postgres database (Neon, or local
 cp Backend/.env.example Backend/.env    # fill in DATABASE_URL, JWT_SECRET, SEED_ADMIN_PASSWORD
 npm run install:all
 npm run db:migrate --prefix Backend     # create tables
-npm run db:seed --prefix Backend        # clinics, vets, demo + admin accounts
+npm run db:seed --prefix Backend        # clinics, vets, admin (+ demo owner if SEED_DEMO_PASSWORD is set)
 
 npm run dev:api                         # terminal 1 — API on :4000
 npm run dev:web                         # terminal 2 — app on :5173 (proxies /api)

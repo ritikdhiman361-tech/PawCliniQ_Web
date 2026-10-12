@@ -250,8 +250,7 @@ export const VETS: VetSeed[] = [
 export const DEMO_USER = {
   name: "Demo Parent",
   mobile: "9876543210",
-  email: "demo@pawcliniq.in",
-  password: "demo123"
+  email: "demo@pawcliniq.in"
 };
 
 export const DEMO_PET = {

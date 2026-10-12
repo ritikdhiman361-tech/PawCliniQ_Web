@@ -1,11 +1,19 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 
+// Fill these in with PawCliniQ's real details; anything left empty is hidden.
+const CONTACT = {
+  address: "Serving pet parents across Bengaluru",
+  phone: "", // e.g. "+91 98xxx xxxxx"
+  email: "", // e.g. "hello@pawcliniq.com"
+  hours: "Clinic hours vary; some clinics are open 24/7",
+};
+
+// Your page URLs, e.g. "https://www.instagram.com/pawcliniq"; empty = hidden.
 const socialLinks = [
-  { label: "f", name: "Facebook", href: "https://www.facebook.com" },
-  { label: "in", name: "LinkedIn", href: "https://www.linkedin.com" },
-  { label: "tw", name: "Twitter", href: "https://twitter.com" },
-];
+  { label: "ig", name: "Instagram", href: "" },
+  { label: "f", name: "Facebook", href: "" },
+].filter((s) => s.href);
 
 const containerVariants = {
   hidden: {},
@@ -49,7 +57,7 @@ const Footer = () => {
           <motion.div variants={itemVariants}>
             <div className="flex items-center gap-2 mb-4 md:mb-6">
               <span className="text-xl font-semibold text-amber-100">
-                pawClinic🐾
+                pawCliniq🐾
               </span>
             </div>
             <p className="text-zinc-300 text-sm leading-relaxed mb-5">
@@ -58,27 +66,29 @@ const Footer = () => {
             </p>
           </motion.div>
 
-          {/* Quick Links */}
-          <motion.div
-            variants={itemVariants}
-            className="flex items-center sm:items-end justify-start sm:justify-center gap-6"
-          >
-            {socialLinks.map((s) => (
-              <motion.a
-                key={s.label}
-                href={s.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={s.name}
-                whileHover={{ scale: 1.18, rotate: 10, y: -3 }}
-                whileTap={{ scale: 0.9 }}
-                transition={{ type: "spring", stiffness: 400, damping: 12 }}
-                className="w-9 h-9 rounded-lg bg-zinc-600 flex items-center justify-center text-amber-200 text-sm hover:bg-zinc-500 transition-colors"
-              >
-                {s.label}
-              </motion.a>
-            ))}
-          </motion.div>
+          {/* Social links */}
+          {socialLinks.length > 0 && (
+            <motion.div
+              variants={itemVariants}
+              className="flex items-center sm:items-end justify-start sm:justify-center gap-6"
+            >
+              {socialLinks.map((s) => (
+                <motion.a
+                  key={s.label}
+                  href={s.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={s.name}
+                  whileHover={{ scale: 1.18, rotate: 10, y: -3 }}
+                  whileTap={{ scale: 0.9 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 12 }}
+                  className="w-9 h-9 rounded-lg bg-zinc-600 flex items-center justify-center text-amber-200 text-sm hover:bg-zinc-500 transition-colors"
+                >
+                  {s.label}
+                </motion.a>
+              ))}
+            </motion.div>
+          )}
 
           {/* Contact */}
           <motion.div variants={itemVariants} className="flex flex-col">
@@ -86,14 +96,22 @@ const Footer = () => {
               Contact
             </p>
             <div className="flex flex-col gap-2">
-              <span className="text-zinc-300 text-sm">
-                📍 123 Pet Lane, Bengaluru
-              </span>
-              <span className="text-zinc-300 text-sm">📞 +91 98765 43210</span>
-              <span className="text-zinc-300 text-sm">
-                ✉️ hello@pawclinic.in
-              </span>
-              <span className="text-zinc-300 text-sm">🕐 Mon–Sat, 9am–7pm</span>
+              {CONTACT.address && (
+                <span className="text-zinc-300 text-sm">📍 {CONTACT.address}</span>
+              )}
+              {CONTACT.phone && (
+                <a href={`tel:${CONTACT.phone.replace(/\s/g, "")}`} className="text-zinc-300 text-sm hover:text-white">
+                  📞 {CONTACT.phone}
+                </a>
+              )}
+              {CONTACT.email && (
+                <a href={`mailto:${CONTACT.email}`} className="text-zinc-300 text-sm hover:text-white">
+                  ✉️ {CONTACT.email}
+                </a>
+              )}
+              {CONTACT.hours && (
+                <span className="text-zinc-300 text-sm">🕐 {CONTACT.hours}</span>
+              )}
             </div>
           </motion.div>
         </div>
@@ -104,7 +122,7 @@ const Footer = () => {
           className="border-t border-zinc-600 pt-5 flex flex-col sm:flex-row gap-3 justify-between items-center text-center sm:text-left"
         >
           <p className="text-zinc-500 text-xs">
-            © 2026 PawClinic. All rights reserved.
+            © {new Date().getFullYear()} PawCliniQ. All rights reserved.
           </p>
           <div className="flex gap-5">
             <Link

@@ -36,6 +36,11 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     res.status(400).json({ error: "Invalid request body." });
     return;
   }
+  // Body over express.json's size limit (100 KB).
+  if (err?.type === "entity.too.large") {
+    res.status(413).json({ error: "That's too much text to send. Please shorten it and try again." });
+    return;
+  }
   console.error(err);
   res.status(500).json({ error: "Something went wrong. Please try again." });
 };

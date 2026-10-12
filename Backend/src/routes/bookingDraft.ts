@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { requireAuth, requireUser } from "../auth.ts";
+import { requireAuth, requireOwner, requireUser } from "../auth.ts";
 import { prisma } from "../db.ts";
 import { HttpError, parse } from "../http.ts";
 import { petBasics, serviceType, visitType } from "../schemas.ts";
@@ -9,7 +9,7 @@ import { draftInclude, toDraftDto } from "../serializers.ts";
 // The booking the logged-in user is part-way through. Each step of the flow
 // (pet details → clinic → vet) saves here; POST /api/bookings deletes it.
 export const bookingDraftRouter = Router();
-bookingDraftRouter.use(requireAuth);
+bookingDraftRouter.use(requireAuth, requireOwner);
 
 // A draft left untouched this long is treated as abandoned, so an old
 // half-finished booking doesn't pre-fill the form weeks later.

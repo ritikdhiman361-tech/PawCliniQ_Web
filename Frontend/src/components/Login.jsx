@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { BREEDS_BY_TYPE, PET_TYPES } from "../data/mockData";
-import { useAuth } from "../context/useAuth";
+import { homeFor, useAuth } from "../context/useAuth";
 import FormMessage from "./FormMessage";
 import Spinner from "./Spinner";
 
@@ -11,9 +11,13 @@ const breedOptionsByPetType = BREEDS_BY_TYPE;
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// "+91 98765-43210" / "098765 43210" → "9876543210" (Indian mobile numbers).
+const normalizeMobile = (value) =>
+  value.replace(/[\s()-]/g, "").replace(/^(\+91|91(?=\d{10}$)|0(?=\d{10}$))/, "");
+
 const validateSignup = (form) => {
   if (form.name.trim().length < 2) return "Please enter your full name.";
-  if (!/^\d{10}$/.test(form.mobile.trim()))
+  if (!/^\d{10}$/.test(normalizeMobile(form.mobile)))
     return "Please enter a valid 10-digit mobile number.";
   if (!EMAIL_PATTERN.test(form.email.trim()))
     return "Please enter a valid email address.";
@@ -35,11 +39,8 @@ function Login() {
   const [success, setSuccess] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Where to go after logging in — the protected page that sent them here,
-  // or the home page for each kind of account.
-  const homeFor = (account) =>
-    ({ clinic: "/clinic", admin: "/admin" })[account?.role] || "/";
-
+  // After logging in: the protected page that sent them here, or the home
+  // page for their kind of account.
   const finish = (message, account) => {
     setSuccess(message);
     const redirectTo = location.state?.from || homeFor(account);
@@ -106,7 +107,7 @@ function Login() {
     try {
       const created = await signup({
         name: signupForm.name,
-        mobile: signupForm.mobile.trim(),
+        mobile: normalizeMobile(signupForm.mobile),
         email: signupForm.email,
         password: signupForm.password,
         pet: {
@@ -224,9 +225,6 @@ function Login() {
                 {submitting ? "Logging in…" : "Login"}
               </motion.button>
 
-              <p className="text-center text-xs text-gray-400">
-                Demo account: demo@pawcliniq.in / demo123
-              </p>
             </motion.form>
           ) : (
             <motion.form
@@ -250,8 +248,8 @@ function Login() {
 
               <input
                 type="tel"
-                inputMode="numeric"
-                maxLength={10}
+                inputMode="tel"
+                maxLength={16}
                 placeholder="Mobile Number"
                 value={signupForm.mobile}
                 onChange={handleSignupChange("mobile")}

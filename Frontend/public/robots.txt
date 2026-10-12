@@ -1,0 +1,7 @@
+User-agent: *
+Disallow: /api/
+Disallow: /admin
+Disallow: /clinic
+Allow: /
+
+Sitemap: https://www.pawcliniq.com/sitemap.xml

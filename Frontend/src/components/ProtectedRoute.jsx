@@ -1,9 +1,10 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useIsPresent } from "framer-motion";
-import { useAuth } from "../context/useAuth";
+import { homeFor, useAuth } from "../context/useAuth";
 
-// `role` limits a page to one kind of account (e.g. "admin"); others go home.
-function ProtectedRoute({ children, role }) {
+// `roles` limits a page to some kinds of account (e.g. ["admin"]); anyone
+// else is sent to their own home page.
+function ProtectedRoute({ children, roles }) {
   const { user } = useAuth();
   const location = useLocation();
   // False while this page plays its exit animation (e.g. right after logout
@@ -16,7 +17,7 @@ function ProtectedRoute({ children, role }) {
     return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
   }
 
-  if (role && user.role !== role) return <Navigate to="/" replace />;
+  if (roles && !roles.includes(user.role)) return <Navigate to={homeFor(user)} replace />;
 
   return children;
 }

@@ -27,7 +27,11 @@ const email = z
 
 const signupSchema = z.object({
   name: z.string().trim().min(2, "Please enter your full name.").max(80),
-  mobile: z.string().trim().regex(/^\d{10}$/, "Please enter a valid 10-digit mobile number."),
+  // Accepts "+91 98765-43210" or "098765 43210" and stores "9876543210".
+  mobile: z
+    .string()
+    .transform((v) => v.replace(/[\s()-]/g, "").replace(/^(\+91|91(?=\d{10}$)|0(?=\d{10}$))/, ""))
+    .pipe(z.string().regex(/^\d{10}$/, "Please enter a valid 10-digit mobile number.")),
   email,
   password: z
     .string()

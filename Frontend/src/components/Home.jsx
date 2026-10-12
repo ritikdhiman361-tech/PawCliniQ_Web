@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
+import { homeFor, useAuth } from "../context/useAuth";
 
 const container = {
   hidden: {},
@@ -25,6 +26,10 @@ const checklist = [
 ];
 
 const Home = () => {
+  const { user } = useAuth();
+  // Clinic staff and admins don't book; send them to their own page.
+  const staffHome = user && user.role !== "user" ? homeFor(user) : null;
+
   return (
     <div className="relative bg-white text-gray-900 min-h-screen flex flex-col lg:flex-row lg:justify-between items-center gap-10 lg:gap-16 px-6 sm:px-10 md:px-16 lg:px-20 py-10 lg:py-15 overflow-hidden">
       {/* Decorative floating gradient accents — purely visual, no interactivity */}
@@ -103,7 +108,7 @@ const Home = () => {
         </motion.div>
 
         <motion.div variants={lineVariant}>
-          <Link to="/appointments" className="inline-block">
+          <Link to={staffHome ?? "/appointments"} className="inline-block">
             <motion.span
               whileHover={{
                 scale: 1.05,
@@ -117,7 +122,7 @@ const Home = () => {
               }}
               className="inline-block mt-10 bg-amber-700 bg-linear-to-br from-amber-600 to-amber-800 text-white px-8 py-3.5 rounded-2xl text-base font-medium shadow-[0_6px_20px_rgba(180,83,9,0.3)] cursor-pointer"
             >
-              Book an appointment →
+              {staffHome ? "Go to your dashboard →" : "Book an appointment →"}
             </motion.span>
           </Link>
         </motion.div>

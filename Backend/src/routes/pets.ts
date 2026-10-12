@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireAuth, requireUser } from "../auth.ts";
+import { requireAuth, requireOwner, requireUser } from "../auth.ts";
 import { prisma } from "../db.ts";
 import { HttpError, isUniqueViolation, isUuid, parse } from "../http.ts";
 import { petProfile } from "../schemas.ts";
@@ -28,11 +28,11 @@ petsRouter.get("/", async (req, res) => {
 });
 
 petsRouter.get("/:id", async (req, res) => {
-  const pet = await findOwnPet(requireUser(req).id, req.params.id);
+  const pet = await findOwnPet(requireUser(req).id, String(req.params.id));
   res.json({ pet: toPetDto(pet) });
 });
 
-petsRouter.post("/", async (req, res) => {
+petsRouter.post("/", requireOwner, async (req, res) => {
   const data = parse(petProfile, req.body);
   try {
     const pet = await prisma.pet.create({
@@ -45,9 +45,9 @@ petsRouter.post("/", async (req, res) => {
   }
 });
 
-petsRouter.put("/:id", async (req, res) => {
+petsRouter.put("/:id", requireOwner, async (req, res) => {
   const data = parse(petProfile, req.body);
-  const { id } = await findOwnPet(requireUser(req).id, req.params.id);
+  const { id } = await findOwnPet(requireUser(req).id, String(req.params.id));
   try {
     const pet = await prisma.pet.update({ where: { id }, data });
     res.json({ pet: toPetDto(pet) });
@@ -59,8 +59,8 @@ petsRouter.put("/:id", async (req, res) => {
 
 // Appointment history stays: bookings keep their pet snapshot and the
 // pet_id foreign key is set to null.
-petsRouter.delete("/:id", async (req, res) => {
-  const { id } = await findOwnPet(requireUser(req).id, req.params.id);
+petsRouter.delete("/:id", requireOwner, async (req, res) => {
+  const { id } = await findOwnPet(requireUser(req).id, String(req.params.id));
   await prisma.pet.delete({ where: { id } });
   res.status(204).end();
 });

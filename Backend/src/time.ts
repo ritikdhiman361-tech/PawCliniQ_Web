@@ -64,6 +64,13 @@ export const fromInstant = (instant: Date) => {
   };
 };
 
+// False for dates that don't exist, like "2026-02-30".
+export const isRealDate = (date: string) => {
+  const [y, m, d] = date.split("-").map(Number);
+  const parsed = new Date(Date.UTC(y, m - 1, d));
+  return parsed.getUTCFullYear() === y && parsed.getUTCMonth() === m - 1 && parsed.getUTCDate() === d;
+};
+
 // JS weekday (0 = Sunday) of a "YYYY-MM-DD" date.
 export const weekdayOf = (date: string) => {
   const [y, m, d] = date.split("-").map(Number);

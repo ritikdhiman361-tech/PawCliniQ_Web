@@ -1,5 +1,31 @@
 import { z } from "zod";
 
+// Plain-English fallbacks for checks that don't set their own message, so
+// users never see validator jargon like "Too big: expected string…".
+z.config({
+  customError: (issue) => {
+    if (issue.code === "too_big" && issue.origin === "string") {
+      return `Please keep this under ${issue.maximum} characters.`;
+    }
+    if (issue.code === "too_small" && issue.origin === "string") {
+      return issue.minimum === 1 ? "Please fill in this field." : `Please enter at least ${issue.minimum} characters.`;
+    }
+    if (issue.code === "too_big" && issue.origin === "number") {
+      return `Please enter a number no higher than ${issue.maximum}.`;
+    }
+    if (issue.code === "too_small" && issue.origin === "number") {
+      return `Please enter a number of at least ${issue.minimum}.`;
+    }
+    if (issue.code === "too_small" && issue.origin === "array") {
+      return "Please choose at least one option.";
+    }
+    if (issue.code === "invalid_type" && issue.input === undefined) {
+      return "Please fill in all required fields.";
+    }
+    return undefined;
+  },
+});
+
 // "" / null / undefined → null, anything else → Number (form inputs send strings).
 const optionalNumber = (schema: z.ZodNumber) =>
   z.preprocess(
@@ -26,10 +52,16 @@ export const petBasics = z.object({
 export const petProfile = petBasics.extend({
   gender: z.string().trim().max(20).optional().default(""),
   age: optionalNumber(
-    z.number("Age must be a number.").min(0).max(30, "Age must be between 0 and 30 years."),
+    z
+      .number("Age must be a number.")
+      .min(0, "Age must be between 0 and 30 years.")
+      .max(30, "Age must be between 0 and 30 years."),
   ),
   weight: optionalNumber(
-    z.number("Weight must be a number.").positive().max(150, "Weight must be between 0 and 150 kg."),
+    z
+      .number("Weight must be a number.")
+      .positive("Weight must be between 0 and 150 kg.")
+      .max(150, "Weight must be between 0 and 150 kg."),
   ),
   notes: z.string().trim().max(1000, "Notes are too long.").optional().default(""),
 });

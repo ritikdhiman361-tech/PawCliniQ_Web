@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { APPOINTMENT_TYPES } from "../data/mockData";
+import { useAuth } from "../context/useAuth";
 import { bookingDraft } from "../services/bookingService";
 import { clinicService } from "../services/clinicService";
 import BookingSummary from "./BookingSummary";
@@ -25,6 +26,9 @@ function Clinics({ bookingData }) {
   const navigate = useNavigate();
 
   const isBookingStep = Boolean(bookingData);
+  // Clinic staff and admins can browse and get directions, but don't book.
+  const { user } = useAuth();
+  const isStaff = Boolean(user && user.role !== "user");
   const [selecting, setSelecting] = useState(null);
   const serviceType = bookingData?.appointment?.type;
   const visitType = bookingData?.appointment?.visitType;
@@ -386,21 +390,23 @@ function Clinics({ bookingData }) {
                     >
                       📍 Get directions
                     </a>
-                    <motion.button
-                      type="button"
-                      onClick={() => handleSelectClinic(clinic)}
-                      disabled={selecting !== null}
-                      whileHover={{
-                        scale: 1.04,
-                      }}
-                      whileTap={{
-                        scale: 0.96,
-                      }}
-                      className="bg-linear-to-br from-amber-600 to-amber-800 text-white px-5 py-2.5 rounded-xl text-sm font-medium shadow-[0_2px_8px_rgba(180,83,9,0.3)] disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      {selecting === clinic.id && <Spinner />}
-                      {isBookingStep ? "View Veterinarians →" : "Book here →"}
-                    </motion.button>
+                    {!isStaff && (
+                      <motion.button
+                        type="button"
+                        onClick={() => handleSelectClinic(clinic)}
+                        disabled={selecting !== null}
+                        whileHover={{
+                          scale: 1.04,
+                        }}
+                        whileTap={{
+                          scale: 0.96,
+                        }}
+                        className="bg-linear-to-br from-amber-600 to-amber-800 text-white px-5 py-2.5 rounded-xl text-sm font-medium shadow-[0_2px_8px_rgba(180,83,9,0.3)] disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {selecting === clinic.id && <Spinner />}
+                        {isBookingStep ? "View Veterinarians →" : "Book here →"}
+                      </motion.button>
+                    )}
                   </div>
                 </div>
               </motion.div>

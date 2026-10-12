@@ -52,9 +52,12 @@ const PageTransition = ({ children }) => (
 
 const page = (element) => <PageTransition>{element}</PageTransition>;
 
-const protectedPage = (element, role) => (
-  <ProtectedRoute role={role}>{page(element)}</ProtectedRoute>
+const protectedPage = (element, roles) => (
+  <ProtectedRoute roles={roles}>{page(element)}</ProtectedRoute>
 );
+
+// Booking and pet profiles are for pet owners; admins also see all bookings.
+const OWNER = ["user"];
 
 const App = () => {
   const location = useLocation();
@@ -74,21 +77,21 @@ const App = () => {
           <Route path="/terms" element={page(<InfoPage page="terms" />)} />
 
           {/* Booking flow: pet details → clinic → vet → date & time */}
-          <Route path="/appointments" element={protectedPage(<BookingForm />)} />
-          <Route path="/select-clinic" element={protectedPage(<Clinics />)} />
-          <Route path="/select-vet" element={protectedPage(<SelectVet />)} />
-          <Route path="/schedule" element={protectedPage(<Schedule />)} />
+          <Route path="/appointments" element={protectedPage(<BookingForm />, OWNER)} />
+          <Route path="/select-clinic" element={protectedPage(<Clinics />, OWNER)} />
+          <Route path="/select-vet" element={protectedPage(<SelectVet />, OWNER)} />
+          <Route path="/schedule" element={protectedPage(<Schedule />, OWNER)} />
 
           {/* Booked appointments */}
-          <Route path="/bookings" element={protectedPage(<BookingsPage />)} />
+          <Route path="/bookings" element={protectedPage(<BookingsPage />, ["user", "admin"])} />
 
           {/* Pet profiles */}
-          <Route path="/pets" element={protectedPage(<Pets />)} />
-          <Route path="/pets/:petId" element={protectedPage(<PetProfile />)} />
+          <Route path="/pets" element={protectedPage(<Pets />, OWNER)} />
+          <Route path="/pets/:petId" element={protectedPage(<PetProfile />, OWNER)} />
 
           {/* Clinic staff and admin tools */}
-          <Route path="/clinic" element={protectedPage(<ClinicDashboard />, "clinic")} />
-          <Route path="/admin" element={protectedPage(<AdminPanel />, "admin")} />
+          <Route path="/clinic" element={protectedPage(<ClinicDashboard />, ["clinic"])} />
+          <Route path="/admin" element={protectedPage(<AdminPanel />, ["admin"])} />
 
           <Route path="*" element={page(<InfoPage page="notFound" />)} />
         </Routes>

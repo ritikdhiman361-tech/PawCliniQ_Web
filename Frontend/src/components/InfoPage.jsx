@@ -15,7 +15,9 @@ const pages = {
     pill: "📄 Terms of use",
     title: "Terms of use",
     body: [
-      "PawCliniQ is in early access. Clinics, veterinarians and time slots shown here are sample data, and bookings are not yet sent to real clinics.",
+      "PawCliniQ lets you book appointments with partner veterinary clinics. Your booking goes to the clinic you choose, and that clinic provides the visit and is responsible for your pet's care.",
+      "Clinic hours, vets and available times are set by each clinic. A clinic may cancel an appointment if it has to; you'll see the reason in My Appointments.",
+      "Please give accurate details for you and your pet, and cancel bookings you can't attend.",
       "For a real emergency, please contact your nearest veterinary hospital directly.",
     ],
   },

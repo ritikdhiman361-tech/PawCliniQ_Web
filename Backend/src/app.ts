@@ -19,6 +19,23 @@ export const app = express();
 if (config.isProduction) app.set("trust proxy", 1);
 app.disable("x-powered-by");
 
+// Basic hardening on every response: no MIME sniffing, the site can't be
+// framed by other sites (clickjacking), and browsers stick to HTTPS.
+app.use((req, res, next) => {
+  res.set({
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Content-Security-Policy": "frame-ancestors 'none'",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    ...(config.isProduction && {
+      "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+    }),
+  });
+  // API answers are per-user; never let a browser or proxy cache them.
+  if (req.path.startsWith("/api/")) res.set("Cache-Control", "no-store");
+  next();
+});
+
 app.use(express.json());
 app.use(cookieParser());
 app.use(loadUser);
@@ -48,9 +65,23 @@ app.use("/api", () => {
 // and API share one origin (no CORS, first-party session cookie).
 const frontendDist = path.resolve(import.meta.dirname, "../../Frontend/dist");
 if (existsSync(frontendDist)) {
-  app.use(express.static(frontendDist, { index: false }));
-  // Client-side routes (/pets/123, /bookings…) all load index.html.
-  app.get(/.*/, (_req, res) => res.sendFile(path.join(frontendDist, "index.html")));
+  app.use(
+    express.static(frontendDist, {
+      index: false,
+      // Built files in /assets have a content hash in their name, so they
+      // can be cached for a year; a new deploy gets new names.
+      setHeaders: (res, filePath) => {
+        if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+          res.set("Cache-Control", "public, max-age=31536000, immutable");
+        }
+      },
+    }),
+  );
+  // Client-side routes (/pets/123, /bookings…) all load index.html, which is
+  // always revalidated so a deploy shows up straight away.
+  app.get(/.*/, (_req, res) =>
+    res.set("Cache-Control", "no-cache").sendFile(path.join(frontendDist, "index.html")),
+  );
 }
 
 app.use(errorHandler);
