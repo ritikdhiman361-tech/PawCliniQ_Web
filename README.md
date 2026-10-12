@@ -27,8 +27,6 @@ npm run dev:api                         # terminal 1 — API on :4000
 npm run dev:web                         # terminal 2 — app on :5173 (proxies /api)
 ```
 
-Demo login: `demo@pawcliniq.in` / `demo123`. Admin: `admin@gmail.com` with
-`SEED_ADMIN_PASSWORD`; admins see every booking with owner contact details.
 
 ## API
 
