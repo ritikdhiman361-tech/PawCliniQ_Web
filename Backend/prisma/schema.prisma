@@ -21,6 +21,13 @@ enum ServiceType {
   emergency
 }
 
+// Where the appointment happens: at the clinic, or the vet visits the
+// owner's home.
+enum VisitType {
+  clinic
+  home
+}
+
 enum BookingStatus {
   confirmed
   cancelled
@@ -71,8 +78,15 @@ model Clinic {
   phone       String
   email       String
   rating      Decimal        @db.Decimal(2, 1)
-  hours       String
   description String
+  // Opening hours, IST. Times are "HH:MM" (24-hour); closeTime "24:00" is
+  // midnight, so "00:00"–"24:00" is open 24 hours. Appointments are
+  // slotMinutes long, starting at openTime.
+  openDays    Int[]          @map("open_days") // JS weekday numbers, 0 = Sunday
+  openTime    String         @map("open_time")
+  closeTime   String         @map("close_time")
+  slotMinutes Int            @default(30) @map("slot_minutes")
+  homeVisits  Boolean        @default(false) @map("home_visits") // vets also visit owners' homes
   services    ServiceType[]
   vets        Vet[]
   bookings    Booking[]
@@ -90,6 +104,10 @@ model Vet {
   experience  Int // years
   rating      Decimal        @db.Decimal(2, 1)
   workingDays Int[]          @map("working_days") // JS weekday numbers, 0 = Sunday
+  // The vet's shift when it differs from the clinic's hours ("HH:MM", IST).
+  // An end before the start is an overnight shift, e.g. "20:00"–"08:00".
+  startTime   String?        @map("start_time")
+  endTime     String?        @map("end_time")
   bookings    Booking[]
   drafts      BookingDraft[]
 
@@ -114,6 +132,8 @@ model Booking {
   vet         Vet           @relation(fields: [vetId], references: [id])
   serviceType ServiceType   @map("service_type")
   startsAt    DateTime      @map("starts_at") @db.Timestamptz
+  visitType   VisitType     @default(clinic) @map("visit_type")
+  homeAddress String?       @map("home_address") // set for home visits
   notes       String        @default("")
   status      BookingStatus @default(confirmed)
   createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz
@@ -137,6 +157,7 @@ model BookingDraft {
   petType     String?      @map("pet_type")
   petBreed    String?      @map("pet_breed")
   serviceType ServiceType? @map("service_type")
+  visitType   VisitType?   @map("visit_type")
   notes       String       @default("")
   clinicId    String?      @map("clinic_id")
   clinic      Clinic?      @relation(fields: [clinicId], references: [id], onDelete: SetNull)

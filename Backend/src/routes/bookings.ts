@@ -4,13 +4,13 @@ import { requireAuth, requireUser } from "../auth.ts";
 import { prisma } from "../db.ts";
 import type { User } from "../generated/prisma/client.ts";
 import { HttpError, isUniqueViolation, isUuid, parse } from "../http.ts";
-import { petBasics, serviceType } from "../schemas.ts";
+import { petBasics, serviceType, visitType } from "../schemas.ts";
 import { bookingInclude, toBookingDto } from "../serializers.ts";
 import {
   BOOKING_WINDOW_DAYS,
-  TIME_SLOTS,
   istDatePlus,
   toInstant,
+  vetSlots,
   weekdayOf,
 } from "../time.ts";
 
@@ -55,8 +55,11 @@ const createSchema = z.object({
   serviceType,
   vetId: z.string().min(1, "Please choose a veterinarian."),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Please choose a date."),
-  time: z.enum(TIME_SLOTS, "Please choose a time slot."),
+  time: z.string().regex(/^\d{2}:\d{2} [AP]M$/, "Please choose a time slot."),
   notes: z.string().trim().max(1000, "Notes are too long.").optional().default(""),
+  visitType: visitType.optional().default("clinic"),
+  // Required for home visits (checked below); ignored for clinic visits.
+  homeAddress: z.string().trim().max(300, "Address is too long.").optional().default(""),
 });
 
 bookingsRouter.post("/", async (req, res) => {
@@ -71,8 +74,19 @@ bookingsRouter.post("/", async (req, res) => {
   if (!vet.clinic.services.includes(input.serviceType)) {
     throw new HttpError(400, `${vet.clinic.name} doesn't offer this appointment type.`);
   }
-  if (!vet.workingDays.includes(weekdayOf(input.date))) {
+  const isHomeVisit = input.visitType === "home";
+  if (isHomeVisit && !vet.clinic.homeVisits) {
+    throw new HttpError(400, `${vet.clinic.name} doesn't offer home visits.`);
+  }
+  if (isHomeVisit && input.homeAddress.length < 10) {
+    throw new HttpError(400, "Please enter the full address for the home visit.");
+  }
+  const weekday = weekdayOf(input.date);
+  if (!vet.workingDays.includes(weekday) || !vet.clinic.openDays.includes(weekday)) {
     throw new HttpError(400, `${vet.name} isn't available on that day.`);
+  }
+  if (!vetSlots(vet, vet.clinic).includes(input.time)) {
+    throw new HttpError(400, `${vet.name} doesn't see patients at that time.`);
   }
   const startsAt = toInstant(input.date, input.time);
   if (startsAt <= new Date()) {
@@ -103,6 +117,8 @@ bookingsRouter.post("/", async (req, res) => {
           vetId: vet.id,
           serviceType: input.serviceType,
           startsAt,
+          visitType: input.visitType,
+          homeAddress: isHomeVisit ? input.homeAddress : null,
           notes: input.notes,
         },
         include: bookingInclude,

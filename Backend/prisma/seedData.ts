@@ -9,12 +9,20 @@ type ClinicSeed = {
   phone: string;
   email: string;
   rating: number;
-  hours: string;
   description: string;
   services: ServiceType[];
+  // Opening hours, IST: JS weekday numbers (0 = Sunday) and "HH:MM" times.
+  // "00:00"–"24:00" is open 24 hours.
+  openDays: number[];
+  openTime: string;
+  closeTime: string;
+  slotMinutes?: number;
+  homeVisits?: boolean; // vets also visit owners' homes
 };
 
-// `days` uses JS weekday numbers (0 = Sunday). Clinics are closed on Sunday.
+// `days` uses JS weekday numbers (0 = Sunday). startTime/endTime are the
+// vet's shift when it differs from the clinic's hours; an end before the
+// start is an overnight shift.
 type VetSeed = {
   id: string;
   clinicId: string;
@@ -23,7 +31,12 @@ type VetSeed = {
   experience: number;
   rating: number;
   days: number[];
+  startTime?: string;
+  endTime?: string;
 };
+
+const MON_SAT = [1, 2, 3, 4, 5, 6];
+const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6];
 
 export const CLINICS: ClinicSeed[] = [
   {
@@ -34,7 +47,10 @@ export const CLINICS: ClinicSeed[] = [
     phone: "+91 98450 11223",
     email: "care@pawcare.in",
     rating: 4.8,
-    hours: "Mon–Sat, 9am–7pm",
+    homeVisits: true,
+    openDays: MON_SAT,
+    openTime: "09:00",
+    closeTime: "19:00",
     description: "A calm, fear-free clinic with in-house diagnostics and a dedicated grooming suite.",
     services: [
       "checkup",
@@ -50,8 +66,11 @@ export const CLINICS: ClinicSeed[] = [
     phone: "+91 98861 44550",
     email: "hello@happytails.in",
     rating: 4.7,
-    hours: "Mon–Sat, 9am–7pm",
-    description: "Full-service pet hospital with surgery, emergency care and a 24/7 on-call vet.",
+    homeVisits: true,
+    openDays: EVERY_DAY,
+    openTime: "00:00",
+    closeTime: "24:00",
+    description: "Open 24/7: full-service pet hospital with surgery, emergency care and overnight vets.",
     services: [
       "checkup",
       "vaccination",
@@ -66,7 +85,9 @@ export const CLINICS: ClinicSeed[] = [
     phone: "+91 99000 87612",
     email: "frontdesk@whiskerwell.in",
     rating: 4.6,
-    hours: "Mon–Sat, 9am–7pm",
+    openDays: MON_SAT,
+    openTime: "09:00",
+    closeTime: "19:00",
     description: "Cat-friendly certified clinic with separate waiting areas for cats and dogs.",
     services: [
       "checkup",
@@ -82,7 +103,10 @@ export const CLINICS: ClinicSeed[] = [
     phone: "+91 97411 30987",
     email: "visit@furryfriends.in",
     rating: 4.5,
-    hours: "Mon–Sat, 9am–7pm",
+    homeVisits: true,
+    openDays: MON_SAT,
+    openTime: "09:00",
+    closeTime: "19:00",
     description: "Neighbourhood vet centre for checkups, vaccinations and urgent care, including birds and rabbits.",
     services: [
       "checkup",
@@ -131,14 +155,20 @@ export const VETS: VetSeed[] = [
     specialty: "Emergency & Critical Care",
     experience: 12,
     rating: 4.9,
-    days: [
-      1,
-      2,
-      3,
-      4,
-      5,
-      6
-    ]
+    days: EVERY_DAY,
+    startTime: "08:00",
+    endTime: "20:00"
+  },
+  {
+    id: "vet-farhan",
+    clinicId: "clinic-indiranagar",
+    name: "Dr. Farhan Ali",
+    specialty: "Night Emergency Care",
+    experience: 9,
+    rating: 4.8,
+    days: EVERY_DAY,
+    startTime: "20:00",
+    endTime: "08:00"
   },
   {
     id: "vet-arjun",
@@ -151,7 +181,9 @@ export const VETS: VetSeed[] = [
       2,
       4,
       6
-    ]
+    ],
+    startTime: "10:00",
+    endTime: "18:00"
   },
   {
     id: "vet-meera",

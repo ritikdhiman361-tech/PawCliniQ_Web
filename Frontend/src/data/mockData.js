@@ -8,17 +8,10 @@ export const APPOINTMENT_TYPES = [
   { value: "emergency", label: "Emergency" },
 ];
 
-export const TIME_SLOTS = {
-  Morning: ["09:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM"],
-  Afternoon: [
-    "02:00 PM",
-    "02:30 PM",
-    "03:00 PM",
-    "03:30 PM",
-    "04:00 PM",
-    "04:30 PM",
-  ],
-};
+export const VISIT_TYPES = [
+  { value: "clinic", label: "Clinic visit", icon: "🏥", hint: "Visit the clinic" },
+  { value: "home", label: "Home visit", icon: "🏠", hint: "The vet comes to you" },
+];
 
 // Shared by sign-up, the booking form and pet profiles.
 export const PET_TYPES = ["Dog", "Cat", "Rabbit", "Bird", "Other"];

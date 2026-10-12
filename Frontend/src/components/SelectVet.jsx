@@ -9,6 +9,8 @@ import WithBookingDraft from "./WithBookingDraft";
 import { backLinkClass, stepPillClass } from "./formStyles";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+// Monday-first, as clinics list their week.
+const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0];
 
 function SelectVet({ draft }) {
   const navigate = useNavigate();
@@ -165,21 +167,23 @@ function SelectVet({ draft }) {
                   🎓 {vet.experience} years of experience
                 </p>
 
+                {vet.hours && (
+                  <p className="text-sm text-stone-600 mb-3">🕐 {vet.hours}</p>
+                )}
+
                 <div className="flex flex-wrap gap-1.5">
-                  {WEEKDAYS.map((day, i) =>
-                    i === 0 ? null : (
-                      <span
-                        key={day}
-                        className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${
-                          vet.days.includes(i)
-                            ? "bg-amber-50 border-amber-300 text-amber-800"
-                            : "border-stone-200 text-stone-400 line-through"
-                        }`}
-                      >
-                        {day}
-                      </span>
-                    ),
-                  )}
+                  {WEEK_ORDER.map((i) => (
+                    <span
+                      key={i}
+                      className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${
+                        vet.days.includes(i)
+                          ? "bg-amber-50 border-amber-300 text-amber-800"
+                          : "border-stone-200 text-stone-400 line-through"
+                      }`}
+                    >
+                      {WEEKDAYS[i]}
+                    </span>
+                  ))}
                 </div>
 
                 <div className="flex justify-end mt-5">

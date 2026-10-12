@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireAuth, requireUser } from "../auth.ts";
 import { prisma } from "../db.ts";
 import { HttpError, parse } from "../http.ts";
-import { petBasics, serviceType } from "../schemas.ts";
+import { petBasics, serviceType, visitType } from "../schemas.ts";
 import { draftInclude, toDraftDto } from "../serializers.ts";
 
 // The booking the logged-in user is part-way through. Each step of the flow
@@ -20,6 +20,7 @@ const EMPTY = {
   petType: null,
   petBreed: null,
   serviceType: null,
+  visitType: null,
   notes: "",
   clinicId: null,
   vetId: null,
@@ -29,6 +30,7 @@ type DraftFields = {
   petType: string | null;
   petBreed: string | null;
   serviceType: z.infer<typeof serviceType> | null;
+  visitType: z.infer<typeof visitType> | null;
   notes: string;
   clinicId: string | null;
   vetId: string | null;
@@ -38,6 +40,7 @@ type DraftFields = {
 const changesSchema = z.object({
   pet: petBasics.nullable().optional(),
   serviceType: serviceType.nullable().optional(),
+  visitType: visitType.nullable().optional(),
   notes: z.string().trim().max(1000, "Notes are too long.").optional(),
   clinicId: z.string().min(1).nullable().optional(),
   vetId: z.string().min(1).nullable().optional(),
@@ -60,6 +63,7 @@ const applyChanges = (base: DraftFields, changes: z.infer<typeof changesSchema>)
     next.petBreed = changes.pet?.breed ?? null;
   }
   if (changes.serviceType !== undefined) next.serviceType = changes.serviceType;
+  if (changes.visitType !== undefined) next.visitType = changes.visitType;
   if (changes.notes !== undefined) next.notes = changes.notes;
   if (changes.clinicId !== undefined && changes.clinicId !== base.clinicId) {
     next.clinicId = changes.clinicId;
@@ -76,6 +80,9 @@ const validate = async (fields: DraftFields) => {
   if (fields.clinicId) {
     const clinic = await prisma.clinic.findUnique({ where: { id: fields.clinicId } });
     if (!clinic) throw new HttpError(400, "That clinic is no longer available.");
+    if (fields.visitType === "home" && !clinic.homeVisits) {
+      throw new HttpError(400, `${clinic.name} doesn't offer home visits.`);
+    }
   }
   if (fields.vetId) {
     const vet = await prisma.vet.findUnique({ where: { id: fields.vetId } });
@@ -111,6 +118,7 @@ bookingDraftRouter.patch("/", async (req, res) => {
         petType: current.petType,
         petBreed: current.petBreed,
         serviceType: current.serviceType,
+        visitType: current.visitType,
         notes: current.notes,
         clinicId: current.clinicId,
         vetId: current.vetId,

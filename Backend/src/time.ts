@@ -2,18 +2,49 @@
 // are clinic-local (IST, UTC+5:30, no DST) regardless of where the server or
 // the browser runs. The database stores the exact instant (timestamptz).
 
-export const TIME_SLOTS = [
-  "09:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
-  "02:00 PM", "02:30 PM", "03:00 PM", "03:30 PM", "04:00 PM", "04:30 PM",
-];
-
 // How far ahead bookings can be made (matches the date picker).
 export const BOOKING_WINDOW_DAYS = 14;
 
 const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
+const DAY_MINUTES = 24 * 60;
 
 const pad = (n: number) => String(n).padStart(2, "0");
+
+// "HH:MM" (24-hour) clock times used for opening hours; "24:00" is midnight
+// at the end of the day.
+export const CLOCK_TIME = /^(([01]\d|2[0-3]):[0-5]\d|24:00)$/;
+
+const toMinutes = (clock: string) => {
+  const [h, m] = clock.split(":").map(Number);
+  return h * 60 + m;
+};
+
+// Minutes after midnight → "10:30 AM"
+const toSlotLabel = (minutes: number) => {
+  const hours = Math.floor(minutes / 60);
+  return `${pad(hours % 12 || 12)}:${pad(minutes % 60)} ${hours < 12 ? "AM" : "PM"}`;
+};
+
+type Hours = { openTime: string; closeTime: string; slotMinutes: number };
+type Shift = { startTime: string | null; endTime: string | null };
+
+// The appointment start times a vet offers each working day, in day order.
+// The vet's own shift wins over the clinic's hours. An end at or before the
+// start runs past midnight, so that day's slots are midnight → end and
+// start → midnight.
+export const vetSlots = (vet: Shift, clinic: Hours) => {
+  const start = toMinutes(vet.startTime ?? clinic.openTime);
+  const end = toMinutes(vet.endTime ?? clinic.closeTime);
+  const ranges = end > start ? [[start, end]] : [[0, end], [start, DAY_MINUTES]];
+  const slots: string[] = [];
+  for (const [from, to] of ranges) {
+    for (let t = from; t + clinic.slotMinutes <= to; t += clinic.slotMinutes) {
+      slots.push(toSlotLabel(t));
+    }
+  }
+  return slots;
+};
 
 // "2026-10-10" + "10:30 AM" (IST) → Date
 export const toInstant = (date: string, time: string) => {

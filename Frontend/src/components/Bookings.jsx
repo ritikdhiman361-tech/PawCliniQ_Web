@@ -328,6 +328,9 @@ function BookingsPage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-sm text-stone-700 mb-4 wrap-break-word">
                     {b.clinic && <span>🏥 {b.clinic}</span>}
+                    {b.visitType === "home" && (
+                      <span className="sm:col-span-2">🏠 Home visit · {b.homeAddress}</span>
+                    )}
                     {b.vet && <span>👩‍⚕️ {b.vet}</span>}
                     <span>
                       🐾 {b.petName} — {b.petType}

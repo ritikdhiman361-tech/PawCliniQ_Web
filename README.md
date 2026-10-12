@@ -34,7 +34,7 @@ npm run dev:web                         # terminal 2 — app on :5173 (proxies /
 |---|---|---|
 | POST | `/api/auth/signup` · `/api/auth/login` · `/api/auth/logout` | — |
 | GET | `/api/auth/me` | — (returns `user: null` when logged out) |
-| GET | `/api/clinics?service=` · `/api/clinics/:id/vets` | — |
+| GET | `/api/clinics?service=&visit=home` · `/api/clinics/:id/vets` | — |
 | GET | `/api/vets/:id/booked-slots?date=YYYY-MM-DD` | user |
 | GET, POST | `/api/pets` | user |
 | GET, PUT, DELETE | `/api/pets/:id` | owner |
@@ -46,8 +46,9 @@ npm run dev:web                         # terminal 2 — app on :5173 (proxies /
 | GET | `/api/health` | — |
 
 Rules the server enforces: one active booking per vet per slot (database
-index), the clinic must offer the service, the vet must work that weekday,
-no past slots, a 14-day booking window, unique pet names per owner, and users
+index), the clinic must offer the service, the clinic must be open and the
+vet must work that weekday, the time must be one of the vet's slots, no past
+slots, a 14-day booking window, unique pet names per owner, and users
 only ever see their own pets and bookings. Appointment times are IST.
 
 Nothing is stored in the browser except the httpOnly session cookie. The
@@ -65,3 +66,20 @@ frontend and applies pending migrations. Seed once from your machine against
 the production database: `npm run db:seed --prefix Backend`.
 
 `psql` against Neon: `PGSSLROOTCERT=system psql "$DATABASE_URL"`.
+
+## Opening hours
+
+Each clinic in `Backend/prisma/seedData.ts` has `openDays` (0 = Sunday),
+`openTime` and `closeTime` ("HH:MM", 24-hour, IST) and an optional
+`slotMinutes` (default 30). `"00:00"`–`"24:00"` is open 24 hours. A vet can
+have their own `startTime`/`endTime` shift; an end before the start is an
+overnight shift (e.g. `"20:00"`–`"08:00"`). Bookable slots are generated from
+these, and the server only accepts those times. After editing, run
+`npm run db:seed --prefix Backend`.
+
+## Visits and directions
+
+Bookings are a clinic visit (default) or a home visit. Clinics opt in with
+`homeVisits: true` in `seedData.ts`; choosing "Home visit" only lists those
+clinics, and the booking must include the owner's address. Each clinic card
+has a "Get directions" link that opens Google Maps to the clinic's address.

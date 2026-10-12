@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { TIME_SLOTS } from "../data/mockData";
 import {
   bookingService,
   formatDate,
@@ -33,6 +32,31 @@ const getAvailableDates = (vetDays) => {
   return dates;
 };
 
+// "09:30 PM" → hour of day (21)
+const hourOf = (slot) => {
+  const [, hh, period] = /^(\d{2}):\d{2} (AM|PM)$/.exec(slot);
+  return (Number(hh) % 12) + (period === "PM" ? 12 : 0);
+};
+
+const PERIODS = [
+  { name: "Early morning", icon: "🌙", until: 6 },
+  { name: "Morning", icon: "🌤️", until: 12 },
+  { name: "Afternoon", icon: "☀️", until: 17 },
+  { name: "Evening", icon: "🌇", until: 21 },
+  { name: "Night", icon: "🌙", until: 24 },
+];
+
+// The vet's slots (from the server, in day order) grouped for display;
+// empty periods are left out.
+const groupSlots = (slots) =>
+  PERIODS.map((period, i) => ({
+    ...period,
+    slots: slots.filter((slot) => {
+      const hour = hourOf(slot);
+      return hour < period.until && hour >= (PERIODS[i - 1]?.until ?? 0);
+    }),
+  })).filter((period) => period.slots.length > 0);
+
 const chipClass = (isSelected, isDisabled) =>
   `rounded-2xl border-2 text-sm font-medium transition-colors ${
     isSelected
@@ -55,6 +79,8 @@ function Schedule({ draft }) {
   );
   const [time, setTime] = useState("");
   const [notes, setNotes] = useState(draft.appointment?.notes || "");
+  const isHomeVisit = draft.appointment?.visitType === "home";
+  const [homeAddress, setHomeAddress] = useState("");
   // Taken slots, tagged with the date they were loaded for.
   const [booked, setBooked] = useState({ date: null, slots: [] });
   const slotsLoading = booked.date !== date;
@@ -63,6 +89,7 @@ function Schedule({ draft }) {
   const [confirmed, setConfirmed] = useState(null);
 
   const vetId = draft.vet?.id;
+  const slotGroups = useMemo(() => groupSlots(draft.vet?.slots ?? []), [draft.vet]);
 
   useEffect(() => {
     if (!vetId || !date) return;
@@ -88,6 +115,8 @@ function Schedule({ draft }) {
   const handleConfirm = async () => {
     if (!date) return setError("Please choose a date.");
     if (!time) return setError("Please choose a time slot.");
+    if (isHomeVisit && homeAddress.trim().length < 10)
+      return setError("Please enter the full address for the home visit.");
 
     setError("");
     setSubmitting(true);
@@ -105,6 +134,8 @@ function Schedule({ draft }) {
         date,
         time,
         notes: notes.trim(),
+        visitType: isHomeVisit ? "home" : "clinic",
+        ...(isHomeVisit && { homeAddress: homeAddress.trim() }),
       });
       setConfirmed(booking);
     } catch (err) {
@@ -156,7 +187,8 @@ function Schedule({ draft }) {
             When works for you?
           </h1>
           <p className="text-sm text-amber-700 mb-8">
-            Showing {draft.vet.name}'s open slots for the next two weeks.
+            Showing {draft.vet.name}'s open slots for the next two weeks
+            {draft.vet.hours && ` (${draft.vet.hours})`}.
           </p>
 
           {/* Dates */}
@@ -204,11 +236,9 @@ function Schedule({ draft }) {
 
           {date && (
             <div className={`space-y-4 mb-6 ${slotsLoading ? "opacity-60" : ""}`}>
-              {Object.entries(TIME_SLOTS).map(([period, slots]) => (
-                <div key={period}>
-                  <Label icon={period === "Morning" ? "🌤️" : "☀️"}>
-                    {period}
-                  </Label>
+              {slotGroups.map(({ name, icon, slots }) => (
+                <div key={name}>
+                  <Label icon={icon}>{name}</Label>
                   <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                     {slots.map((slot) => {
                       const isDisabled = isSlotUnavailable(slot);
@@ -234,6 +264,28 @@ function Schedule({ draft }) {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Home visit address */}
+
+          {isHomeVisit && (
+            <div className="mb-6">
+              <Label icon="🏠" htmlFor="home-address">
+                Address for the home visit
+              </Label>
+              <textarea
+                id="home-address"
+                rows="3"
+                maxLength={300}
+                className={`${inputClass} resize-none`}
+                placeholder="House / flat number, street, area, landmark, city, PIN code"
+                value={homeAddress}
+                onChange={(e) => {
+                  setHomeAddress(e.target.value);
+                  setError("");
+                }}
+              />
             </div>
           )}
 
@@ -270,7 +322,11 @@ function Schedule({ draft }) {
                 📅 {date ? formatDate(date) : "Choose a date"}
                 {time ? ` · ${time}` : ""}
               </span>
-              <span>📍 {draft.clinic.location}</span>
+              <span>
+                {isHomeVisit
+                  ? `🏠 Home visit${homeAddress.trim() ? ` · ${homeAddress.trim()}` : ""}`
+                  : `📍 Clinic visit · ${draft.clinic.location}`}
+              </span>
             </div>
           </div>
 
@@ -334,6 +390,9 @@ function BookingConfirmed({ booking }) {
               📅 {formatDate(booking.date)} · {booking.time}
             </p>
             <p>🏥 {booking.clinic}</p>
+            {booking.visitType === "home" && (
+              <p>🏠 Home visit · {booking.homeAddress}</p>
+            )}
             <p>👩‍⚕️ {booking.vet}</p>
           </div>
 

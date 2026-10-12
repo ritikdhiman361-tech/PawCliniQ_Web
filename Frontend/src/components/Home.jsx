@@ -19,7 +19,7 @@ const lineVariant = {
 
 const checklist = [
   "Certified, experienced groomers & vets",
-  "Flexible morning & afternoon time slots",
+  "Flexible time slots, including 24/7 clinics",
   "Anxiety-free environment for all pets",
   "All breeds and pet types welcome",
 ];

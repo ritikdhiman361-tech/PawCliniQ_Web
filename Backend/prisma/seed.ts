@@ -2,15 +2,46 @@
 // write is an upsert, so existing users, pets and bookings are left alone.
 import bcrypt from "bcryptjs";
 import { prisma } from "../src/db.ts";
+import { CLOCK_TIME } from "../src/time.ts";
 import { CLINICS, DEMO_PET, DEMO_USER, VETS } from "./seedData.ts";
 
+// Catches typos in opening hours before they reach the booking page.
+function checkHours() {
+  const isDay = (d: number) => Number.isInteger(d) && d >= 0 && d <= 6;
+  for (const c of CLINICS) {
+    if (!c.openDays.length || !c.openDays.every(isDay)) throw new Error(`${c.id}: bad openDays`);
+    if (!CLOCK_TIME.test(c.openTime) || !CLOCK_TIME.test(c.closeTime)) {
+      throw new Error(`${c.id}: times must be "HH:MM" (24-hour)`);
+    }
+    if (c.slotMinutes !== undefined && !(c.slotMinutes >= 5 && c.slotMinutes <= 240)) {
+      throw new Error(`${c.id}: slotMinutes must be 5–240`);
+    }
+  }
+  for (const v of VETS) {
+    const clinic = CLINICS.find((c) => c.id === v.clinicId);
+    if (!clinic) throw new Error(`${v.id}: unknown clinic ${v.clinicId}`);
+    if (!v.days.every((d) => clinic.openDays.includes(d))) {
+      throw new Error(`${v.id}: works on a day ${clinic.id} is closed`);
+    }
+    if ((v.startTime === undefined) !== (v.endTime === undefined)) {
+      throw new Error(`${v.id}: set both startTime and endTime, or neither`);
+    }
+    if (v.startTime && (!CLOCK_TIME.test(v.startTime) || !CLOCK_TIME.test(v.endTime!))) {
+      throw new Error(`${v.id}: times must be "HH:MM" (24-hour)`);
+    }
+  }
+}
+
 async function main() {
-  for (const { id, ...data } of CLINICS) {
+  checkHours();
+
+  for (const { id, homeVisits = false, ...rest } of CLINICS) {
+    const data = { ...rest, homeVisits };
     await prisma.clinic.upsert({ where: { id }, create: { id, ...data }, update: data });
   }
 
-  for (const { id, days, ...vet } of VETS) {
-    const data = { ...vet, workingDays: days };
+  for (const { id, days, startTime = null, endTime = null, ...vet } of VETS) {
+    const data = { ...vet, workingDays: days, startTime, endTime };
     await prisma.vet.upsert({ where: { id }, create: { id, ...data }, update: data });
   }
 

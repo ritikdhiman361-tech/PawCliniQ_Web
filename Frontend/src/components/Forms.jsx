@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import Select from "react-select";
 import { motion } from "framer-motion";
-import { APPOINTMENT_TYPES, BREEDS_BY_TYPE, PET_TYPES } from "../data/mockData";
+import { APPOINTMENT_TYPES, BREEDS_BY_TYPE, PET_TYPES, VISIT_TYPES } from "../data/mockData";
 import { petService } from "../services/petService";
 import { bookingDraft } from "../services/bookingService";
 import FormMessage from "./FormMessage";
@@ -91,6 +91,9 @@ function BookingForm({ draft }) {
       APPOINTMENT_TYPES.find((o) => o.value === draft.appointment?.type) ||
       null,
   );
+  const [visitType, setVisitType] = useState(
+    draft.appointment?.visitType || "clinic",
+  );
   const [petName, setPetName] = useState(draft.pet?.name || "");
   const [problemDescription, setProblemDescription] = useState(
     draft.appointment?.notes || "",
@@ -167,6 +170,8 @@ function BookingForm({ draft }) {
     if (!appointmentType) return "Please select an appointment type.";
     if (presetClinic && !presetClinic.services.includes(appointmentType.value))
       return `${presetClinic.name} doesn't offer ${appointmentType.label.toLowerCase()}. Choose another appointment type or clinic.`;
+    if (presetClinic && visitType === "home" && !presetClinic.homeVisits)
+      return `${presetClinic.name} doesn't offer home visits. Choose a clinic visit or another clinic.`;
     return "";
   };
 
@@ -190,6 +195,7 @@ function BookingForm({ draft }) {
           breed: breed.label.trim(),
         },
         serviceType: appointmentType.value,
+        visitType,
         notes: problemDescription.trim(),
         clinicId: presetClinic?.id ?? null,
         vetId: null,
@@ -397,6 +403,42 @@ function BookingForm({ draft }) {
               placeholder="Select appointment"
               styles={selectStyles}
             />
+          </motion.div>
+
+          {/* Visit Type */}
+
+          <motion.div variants={fieldItem}>
+            <Label icon="📍">Where</Label>
+            <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Visit type">
+              {VISIT_TYPES.map((option) => {
+                const isSelected = visitType === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={isSelected}
+                    onClick={() => {
+                      setVisitType(option.value);
+                      setError("");
+                    }}
+                    className={`rounded-xl border-2 px-3 py-2 text-left transition-colors ${
+                      isSelected
+                        ? "border-amber-600 bg-amber-50 text-amber-900"
+                        : "border-stone-200 text-stone-600 hover:border-amber-400"
+                    }`}
+                  >
+                    <span className="flex items-center justify-between gap-1 text-sm font-medium">
+                      <span>
+                        {option.icon} {option.label}
+                      </span>
+                      {isSelected && <span aria-hidden="true">✓</span>}
+                    </span>
+                    <span className="block text-xs opacity-70">{option.hint}</span>
+                  </button>
+                );
+              })}
+            </div>
           </motion.div>
 
           {/* Problem Description */}

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireAuth } from "../auth.ts";
 import { prisma } from "../db.ts";
 import { HttpError, parse } from "../http.ts";
-import { SERVICE_TYPES } from "../schemas.ts";
+import { SERVICE_TYPES, VISIT_TYPES } from "../schemas.ts";
 import { toClinicDto, toVetDto } from "../serializers.ts";
 import { fromInstant, istDayRange } from "../time.ts";
 
@@ -13,12 +13,16 @@ export const vetsRouter = Router();
 
 const serviceQuery = z.object({
   service: z.enum(SERVICE_TYPES).optional(),
+  visit: z.enum(VISIT_TYPES).optional(),
 });
 
 clinicsRouter.get("/", async (req, res) => {
-  const { service } = parse(serviceQuery, req.query);
+  const { service, visit } = parse(serviceQuery, req.query);
   const clinics = await prisma.clinic.findMany({
-    where: service ? { services: { has: service } } : {},
+    where: {
+      ...(service && { services: { has: service } }),
+      ...(visit === "home" && { homeVisits: true }),
+    },
     orderBy: { rating: "desc" },
   });
   res.json({ clinics: clinics.map(toClinicDto) });
@@ -30,7 +34,7 @@ clinicsRouter.get("/:id/vets", async (req, res) => {
     include: { vets: { orderBy: { rating: "desc" } } },
   });
   if (!clinic) throw new HttpError(404, "Clinic not found.");
-  res.json({ vets: clinic.vets.map(toVetDto) });
+  res.json({ vets: clinic.vets.map((vet) => toVetDto({ ...vet, clinic })) });
 });
 
 const dateQuery = z.object({

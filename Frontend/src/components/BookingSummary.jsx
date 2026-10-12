@@ -25,6 +25,9 @@ const BookingSummary = ({ draft }) => {
         <span className="text-amber-700">
           🩺 {draft.appointment?.typeLabel}
         </span>
+        <span className="text-amber-700">
+          {draft.appointment?.visitType === "home" ? "🏠 Home visit" : "🏥 Clinic visit"}
+        </span>
         {draft.clinic && (
           <span className="text-amber-700">🏥 {draft.clinic.name}</span>
         )}

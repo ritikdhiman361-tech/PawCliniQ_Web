@@ -58,10 +58,10 @@ export const bookingService = {
 
   // The server checks the slot is free (409 if just taken), finds the pet by
   // name among the user's pets or saves it as a new profile.
-  createBooking: ({ pet, serviceType, vetId, date, time, notes }) =>
+  createBooking: ({ pet, serviceType, vetId, date, time, notes, visitType, homeAddress }) =>
     api("/bookings", {
       method: "POST",
-      body: { pet, serviceType, vetId, date, time, notes },
+      body: { pet, serviceType, vetId, date, time, notes, visitType, homeAddress },
     }).then((d) => d.booking),
 
   cancelBooking: (id) =>

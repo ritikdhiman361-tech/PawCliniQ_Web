@@ -11,6 +11,10 @@ export const SERVICE_TYPES = ["checkup", "vaccination", "grooming", "emergency"]
 
 export const serviceType = z.enum(SERVICE_TYPES, "Please select an appointment type.");
 
+export const VISIT_TYPES = ["clinic", "home"] as const;
+
+export const visitType = z.enum(VISIT_TYPES, "Please choose a clinic or home visit.");
+
 // The pet details collected at sign-up and in the booking form.
 export const petBasics = z.object({
   name: z.string().trim().min(1, "Please enter your pet's name.").max(50),

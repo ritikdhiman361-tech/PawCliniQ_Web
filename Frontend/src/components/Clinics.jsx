@@ -9,6 +9,13 @@ import FormMessage from "./FormMessage";
 import Spinner from "./Spinner";
 import WithBookingDraft from "./WithBookingDraft";
 
+// Opens Google Maps (the app on phones) with directions from the user's
+// location to the clinic.
+const directionsUrl = (clinic) =>
+  `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+    [clinic.name, clinic.address, clinic.location].filter(Boolean).join(", "),
+  )}`;
+
 const serviceLabel = (value) =>
   APPOINTMENT_TYPES.find((t) => t.value === value)?.label || value;
 
@@ -20,6 +27,7 @@ function Clinics({ bookingData }) {
   const isBookingStep = Boolean(bookingData);
   const [selecting, setSelecting] = useState(null);
   const serviceType = bookingData?.appointment?.type;
+  const visitType = bookingData?.appointment?.visitType;
 
   const [clinics, setClinics] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,7 +45,7 @@ function Clinics({ bookingData }) {
     let active = true;
 
     clinicService
-      .getClinics(serviceType)
+      .getClinics(serviceType, visitType)
       .then((list) => active && setClinics(list))
       .catch(
         (err) =>
@@ -49,7 +57,7 @@ function Clinics({ bookingData }) {
     return () => {
       active = false;
     };
-  }, [serviceType, reloadKey]);
+  }, [serviceType, visitType, reloadKey]);
 
   // ---------------------------------------------
   // SELECT CLINIC
@@ -299,6 +307,16 @@ function Clinics({ bookingData }) {
                         ⭐ {clinic.rating}
                       </span>
                     )}
+                    {clinic.open24Hours && (
+                      <span className="rounded-full bg-emerald-50 border border-emerald-300 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                        Open 24/7
+                      </span>
+                    )}
+                    {clinic.homeVisits && (
+                      <span className="rounded-full bg-sky-50 border border-sky-300 px-2 py-0.5 text-[11px] font-semibold text-sky-700">
+                        🏠 Home visits
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -359,21 +377,31 @@ function Clinics({ bookingData }) {
                   <span className="text-xs text-stone-500">
                     {clinic.hours && `🕐 ${clinic.hours}`}
                   </span>
-                  <motion.button
-                    type="button"
-                    onClick={() => handleSelectClinic(clinic)}
-                    disabled={selecting !== null}
-                    whileHover={{
-                      scale: 1.04,
-                    }}
-                    whileTap={{
-                      scale: 0.96,
-                    }}
-                    className="bg-linear-to-br from-amber-600 to-amber-800 text-white px-5 py-2.5 rounded-xl text-sm font-medium shadow-[0_2px_8px_rgba(180,83,9,0.3)] disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    {selecting === clinic.id && <Spinner />}
-                    {isBookingStep ? "View Veterinarians →" : "Book here →"}
-                  </motion.button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <a
+                      href={directionsUrl(clinic)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-xl border-2 border-amber-700 px-4 py-2 text-sm font-medium text-amber-800 hover:bg-amber-50 transition-colors"
+                    >
+                      📍 Get directions
+                    </a>
+                    <motion.button
+                      type="button"
+                      onClick={() => handleSelectClinic(clinic)}
+                      disabled={selecting !== null}
+                      whileHover={{
+                        scale: 1.04,
+                      }}
+                      whileTap={{
+                        scale: 0.96,
+                      }}
+                      className="bg-linear-to-br from-amber-600 to-amber-800 text-white px-5 py-2.5 rounded-xl text-sm font-medium shadow-[0_2px_8px_rgba(180,83,9,0.3)] disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {selecting === clinic.id && <Spinner />}
+                      {isBookingStep ? "View Veterinarians →" : "Book here →"}
+                    </motion.button>
+                  </div>
                 </div>
               </motion.div>
             ))}
