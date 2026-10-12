@@ -49,7 +49,14 @@ export function AuthProvider({ children }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, isAdmin: user?.role === "admin", login, signup, logout }),
+    () => ({
+      user,
+      isAdmin: user?.role === "admin",
+      isClinic: user?.role === "clinic",
+      login,
+      signup,
+      logout,
+    }),
     [user, login, signup, logout],
   );
 

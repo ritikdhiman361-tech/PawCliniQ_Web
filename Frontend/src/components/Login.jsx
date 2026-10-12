@@ -35,11 +35,14 @@ function Login() {
   const [success, setSuccess] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Where to go after logging in — the protected page that sent them here.
-  const redirectTo = location.state?.from || "/";
+  // Where to go after logging in — the protected page that sent them here,
+  // or the home page for each kind of account.
+  const homeFor = (account) =>
+    ({ clinic: "/clinic", admin: "/admin" })[account?.role] || "/";
 
-  const finish = (message) => {
+  const finish = (message, account) => {
     setSuccess(message);
+    const redirectTo = location.state?.from || homeFor(account);
     setTimeout(() => navigate(redirectTo, { replace: true }), 700);
   };
 
@@ -63,7 +66,7 @@ function Login() {
     setSubmitting(true);
     try {
       const loggedIn = await login(email, password);
-      finish(`Welcome back, ${loggedIn.name.split(" ")[0]}! Redirecting…`);
+      finish(`Welcome back, ${loggedIn.name.split(" ")[0]}! Redirecting…`, loggedIn);
     } catch (err) {
       setError(err.message);
       setSubmitting(false);
@@ -125,7 +128,7 @@ function Login() {
   // Already logged in: skip this page. (While submitting/showing the success
   // message, `finish` handles the redirect itself.)
   if (user && !submitting && !success) {
-    return <Navigate to={redirectTo} replace />;
+    return <Navigate to={location.state?.from || homeFor(user)} replace />;
   }
 
   return (

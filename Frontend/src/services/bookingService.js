@@ -37,6 +37,7 @@ export const formatDate = (dateKey) => {
 // appointment time having passed, not stored.
 export const getBookingPhase = (booking) => {
   if (booking.status === "Cancelled") return "cancelled";
+  if (booking.status === "Completed" || booking.status === "No-show") return "completed";
   return new Date(booking.startsAt) < new Date() ? "completed" : "upcoming";
 };
 
@@ -64,10 +65,19 @@ export const bookingService = {
       body: { pet, serviceType, vetId, date, time, notes, visitType, homeAddress },
     }).then((d) => d.booking),
 
-  cancelBooking: (id) =>
-    api(`/bookings/${encodeURIComponent(id)}/cancel`, { method: "PATCH" }).then(
-      (d) => d.booking,
-    ),
+  // Clinics and admins can give a reason, which the owner sees.
+  cancelBooking: (id, reason) =>
+    api(`/bookings/${encodeURIComponent(id)}/cancel`, {
+      method: "PATCH",
+      body: reason ? { reason } : undefined,
+    }).then((d) => d.booking),
+
+  // Clinic staff: "completed" or "no_show", from the day of the visit.
+  setOutcome: (id, status) =>
+    api(`/bookings/${encodeURIComponent(id)}/status`, {
+      method: "PATCH",
+      body: { status },
+    }).then((d) => d.booking),
 
   // Only cancelled or past bookings can be removed from history.
   deleteBooking: (id) =>

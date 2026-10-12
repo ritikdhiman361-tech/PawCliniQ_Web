@@ -20,13 +20,22 @@ const SERVICE_LABELS = {
 const toNumber = (value: { toNumber(): number } | null) =>
   value === null ? null : value.toNumber();
 
-export const toUserDto = (user: User) => ({
+export const toUserDto = (user: User & { clinic: Clinic | null }) => ({
   id: user.id,
   name: user.name,
   email: user.email,
   mobile: user.mobile ?? "",
   role: user.role,
+  // Clinic-staff accounts only.
+  clinic: user.clinic ? { id: user.clinic.id, name: user.clinic.name } : null,
 });
+
+const STATUS_LABELS = {
+  confirmed: "Confirmed",
+  cancelled: "Cancelled",
+  completed: "Completed",
+  no_show: "No-show",
+} as const;
 
 export const toPetDto = (pet: Pet) => ({
   id: pet.id,
@@ -90,10 +99,11 @@ type BookingWithRelations = Booking & {
   user: User;
 };
 
-// Owner contact details are only included for admins.
-export const toBookingDto = (b: BookingWithRelations, forAdmin: boolean) => ({
+// Owner contact details are only included for staff (admins and the clinic).
+export const toBookingDto = (b: BookingWithRelations, withContact: boolean) => ({
   id: b.id,
-  status: b.status === "cancelled" ? "Cancelled" : "Confirmed",
+  status: STATUS_LABELS[b.status],
+  cancelReason: b.cancelReason ?? "",
   startsAt: b.startsAt,
   ...fromInstant(b.startsAt),
   serviceType: b.serviceType,
@@ -110,7 +120,7 @@ export const toBookingDto = (b: BookingWithRelations, forAdmin: boolean) => ({
   vet: b.vet.name,
   notes: b.notes,
   createdAt: b.createdAt,
-  ...(forAdmin && {
+  ...(withContact && {
     name: b.user.name,
     userEmail: b.user.email,
     phone: b.user.mobile ?? "",

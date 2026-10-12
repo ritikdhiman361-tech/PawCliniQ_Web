@@ -2,13 +2,16 @@ import type { RequestHandler, Response } from "express";
 import jwt from "jsonwebtoken";
 import { config } from "./config.ts";
 import { prisma } from "./db.ts";
-import type { User } from "./generated/prisma/client.ts";
+import type { Clinic, User } from "./generated/prisma/client.ts";
 import { HttpError } from "./http.ts";
+
+// The logged-in user, with their clinic for clinic-staff accounts.
+export type SessionUser = User & { clinic: Clinic | null };
 
 declare global {
   namespace Express {
     interface Request {
-      user?: User;
+      user?: SessionUser;
     }
   }
 }
@@ -42,7 +45,9 @@ export const loadUser: RequestHandler = async (req, _res, next) => {
   if (!token) return next();
   try {
     const { sub } = jwt.verify(token, config.jwtSecret) as { sub: string };
-    req.user = (await prisma.user.findUnique({ where: { id: sub } })) ?? undefined;
+    req.user =
+      (await prisma.user.findUnique({ where: { id: sub }, include: { clinic: true } })) ??
+      undefined;
   } catch {
     // Expired or tampered token — treat as logged out.
   }
@@ -54,7 +59,12 @@ export const requireAuth: RequestHandler = (req, _res, next) => {
   next();
 };
 
-export const requireUser = (req: { user?: User }) => {
+export const requireUser = (req: { user?: SessionUser }) => {
   if (!req.user) throw new HttpError(401, "Please log in to continue.");
   return req.user;
+};
+
+export const requireAdmin: RequestHandler = (req, _res, next) => {
+  if (requireUser(req).role !== "admin") throw new HttpError(403, "Admins only.");
+  next();
 };

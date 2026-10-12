@@ -14,6 +14,7 @@ const statusClasses = {
   Confirmed: "bg-emerald-100 text-emerald-800 border-emerald-300",
   Completed: "bg-amber-100 text-amber-800 border-amber-300",
   Cancelled: "bg-red-100 text-red-800 border-red-300",
+  "No-show": "bg-stone-100 text-stone-700 border-stone-300",
 };
 
 const TABS = [
@@ -341,6 +342,11 @@ function BookingsPage() {
                       <span>✉️ {b.userEmail || b.email}</span>
                     )}
                     {isAdmin && b.phone && <span>📞 {b.phone}</span>}
+                    {b.status === "Cancelled" && b.cancelReason && (
+                      <span className="sm:col-span-2 text-red-700">
+                        Cancelled by the clinic: {b.cancelReason}
+                      </span>
+                    )}
                     {b.notes && (
                       <span className="sm:col-span-2 text-stone-500">
                         📋 {b.notes}

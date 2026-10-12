@@ -1,5 +1,6 @@
-// Loads clinics, vets and the demo/admin accounts. Safe to re-run: every
-// write is an upsert, so existing users, pets and bookings are left alone.
+// Loads the sample clinics, vets and the demo/admin accounts. Safe to re-run:
+// it only creates what's missing and never overwrites existing rows, so
+// changes made in the admin panel are kept.
 import bcrypt from "bcryptjs";
 import { prisma } from "../src/db.ts";
 import { CLOCK_TIME } from "../src/time.ts";
@@ -37,12 +38,13 @@ async function main() {
 
   for (const { id, homeVisits = false, ...rest } of CLINICS) {
     const data = { ...rest, homeVisits };
-    await prisma.clinic.upsert({ where: { id }, create: { id, ...data }, update: data });
+    // Create-only: clinics are edited in the admin panel after that.
+    await prisma.clinic.upsert({ where: { id }, create: { id, ...data }, update: {} });
   }
 
   for (const { id, days, startTime = null, endTime = null, ...vet } of VETS) {
     const data = { ...vet, workingDays: days, startTime, endTime };
-    await prisma.vet.upsert({ where: { id }, create: { id, ...data }, update: data });
+    await prisma.vet.upsert({ where: { id }, create: { id, ...data }, update: {} });
   }
 
   const adminPassword = process.env.SEED_ADMIN_PASSWORD;

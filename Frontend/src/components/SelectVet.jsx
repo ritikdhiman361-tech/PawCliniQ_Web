@@ -158,7 +158,7 @@ function SelectVet({ draft }) {
                       👩‍⚕️
                     </div>
                     <span className="text-xs font-medium text-amber-800">
-                      ⭐ {vet.rating}
+                      {vet.rating > 0 ? `⭐ ${vet.rating}` : "New"}
                     </span>
                   </div>
                 </div>

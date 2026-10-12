@@ -12,6 +12,7 @@ datasource db {
 enum Role {
   user
   admin
+  clinic // clinic staff: see and manage their own clinic's appointments
 }
 
 enum ServiceType {
@@ -31,6 +32,8 @@ enum VisitType {
 enum BookingStatus {
   confirmed
   cancelled
+  completed // marked by the clinic after the visit
+  no_show
 }
 
 model User {
@@ -40,6 +43,9 @@ model User {
   mobile       String?
   passwordHash String        @map("password_hash")
   role         Role          @default(user)
+  // The clinic a clinic-staff account belongs to; null for everyone else.
+  clinicId     String?       @map("clinic_id")
+  clinic       Clinic?       @relation(fields: [clinicId], references: [id])
   createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz
   updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz
   pets         Pet[]
@@ -87,6 +93,8 @@ model Clinic {
   closeTime   String         @map("close_time")
   slotMinutes Int            @default(30) @map("slot_minutes")
   homeVisits  Boolean        @default(false) @map("home_visits") // vets also visit owners' homes
+  active      Boolean        @default(true) // inactive clinics are hidden from booking
+  staff       User[]
   services    ServiceType[]
   vets        Vet[]
   bookings    Booking[]
@@ -108,6 +116,7 @@ model Vet {
   // An end before the start is an overnight shift, e.g. "20:00"–"08:00".
   startTime   String?        @map("start_time")
   endTime     String?        @map("end_time")
+  active      Boolean        @default(true) // inactive vets are hidden from booking
   bookings    Booking[]
   drafts      BookingDraft[]
 
@@ -136,6 +145,7 @@ model Booking {
   homeAddress String?       @map("home_address") // set for home visits
   notes       String        @default("")
   status      BookingStatus @default(confirmed)
+  cancelReason String?      @map("cancel_reason") // given when the clinic cancels
   createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz
   updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz
 

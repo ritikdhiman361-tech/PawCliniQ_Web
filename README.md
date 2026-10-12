@@ -40,9 +40,12 @@ npm run dev:web                         # terminal 2 — app on :5173 (proxies /
 | GET, PUT, DELETE | `/api/pets/:id` | owner |
 | GET | `/api/bookings?petId=` | user (admin: all) |
 | POST | `/api/bookings` | user |
-| PATCH | `/api/bookings/:id/cancel` | owner or admin |
+| PATCH | `/api/bookings/:id/cancel` (staff may send `reason`) | owner, clinic or admin |
+| PATCH | `/api/bookings/:id/status` (`completed` / `no_show`) | clinic or admin |
 | DELETE | `/api/bookings/:id` (cancelled or past only) | owner or admin |
 | GET, PATCH, PUT, DELETE | `/api/booking-draft` (in-progress booking) | user |
+| GET, POST, PUT | `/api/admin/clinics[/:id]` · `POST /api/admin/clinics/:id/vets` · `PUT /api/admin/vets/:id` | admin |
+| POST, DELETE | `/api/admin/clinics/:id/staff` · `/api/admin/staff/:id` (clinic logins) | admin |
 | GET | `/api/health` | — |
 
 Rules the server enforces: one active booking per vet per slot (database
@@ -67,19 +70,31 @@ the production database: `npm run db:seed --prefix Backend`.
 
 `psql` against Neon: `PGSSLROOTCERT=system psql "$DATABASE_URL"`.
 
+## Accounts and pages
+
+- **Pet owners** sign up themselves and book from the booking flow.
+- **Clinic staff** (`role: clinic`) log in at `/login` and land on
+  `/clinic`: their clinic's appointments only (Today / Upcoming / Past /
+  Cancelled), with owner contact details, Navigate for home visits, and
+  Completed / No-show / Cancel-with-reason. Admins create these logins.
+- **Admin** (`admin@gmail.com`) lands on `/admin`: add and edit clinics
+  (details, services, open days and hours, slot length, home visits,
+  active), their vets (working days, own shift, active) and clinic logins.
+  `/bookings` shows every booking.
+
+The seed only creates the sample clinics, vets and accounts that are
+missing; after that, clinics and vets are managed in the admin panel.
+
 ## Opening hours
 
-Each clinic in `Backend/prisma/seedData.ts` has `openDays` (0 = Sunday),
-`openTime` and `closeTime` ("HH:MM", 24-hour, IST) and an optional
-`slotMinutes` (default 30). `"00:00"`–`"24:00"` is open 24 hours. A vet can
-have their own `startTime`/`endTime` shift; an end before the start is an
-overnight shift (e.g. `"20:00"`–`"08:00"`). Bookable slots are generated from
-these, and the server only accepts those times. After editing, run
-`npm run db:seed --prefix Backend`.
+Clinics have open days and opening/closing times (IST); "Open 24 hours" is
+`00:00`–`24:00`. A vet can have their own shift; an end before the start is an
+overnight shift (e.g. 20:00–08:00). Bookable slots are generated from these,
+and the server only accepts those times.
 
 ## Visits and directions
 
-Bookings are a clinic visit (default) or a home visit. Clinics opt in with
-`homeVisits: true` in `seedData.ts`; choosing "Home visit" only lists those
-clinics, and the booking must include the owner's address. Each clinic card
-has a "Get directions" link that opens Google Maps to the clinic's address.
+Bookings are a clinic visit (default) or a home visit. Choosing "Home visit"
+only lists clinics that offer it, and the booking must include the owner's
+address. Each clinic card has a "Get directions" link that opens Google Maps
+to the clinic's address.

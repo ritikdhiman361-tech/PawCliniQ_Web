@@ -20,6 +20,7 @@ clinicsRouter.get("/", async (req, res) => {
   const { service, visit } = parse(serviceQuery, req.query);
   const clinics = await prisma.clinic.findMany({
     where: {
+      active: true,
       ...(service && { services: { has: service } }),
       ...(visit === "home" && { homeVisits: true }),
     },
@@ -31,9 +32,9 @@ clinicsRouter.get("/", async (req, res) => {
 clinicsRouter.get("/:id/vets", async (req, res) => {
   const clinic = await prisma.clinic.findUnique({
     where: { id: req.params.id },
-    include: { vets: { orderBy: { rating: "desc" } } },
+    include: { vets: { where: { active: true }, orderBy: { rating: "desc" } } },
   });
-  if (!clinic) throw new HttpError(404, "Clinic not found.");
+  if (!clinic || !clinic.active) throw new HttpError(404, "Clinic not found.");
   res.json({ vets: clinic.vets.map((vet) => toVetDto({ ...vet, clinic })) });
 });
 

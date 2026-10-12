@@ -13,6 +13,8 @@ import Schedule from "./components/Schedule";
 import InfoPage from "./components/InfoPage";
 import Pets from "./components/Pets";
 import PetProfile from "./components/PetProfile";
+import ClinicDashboard from "./components/ClinicDashboard";
+import AdminPanel from "./components/AdminPanel";
 
 // Purely decorative, non-interactive backdrop shared across every page —
 // a faint animated grid plus a few slow-drifting gradient blobs. It sits
@@ -50,8 +52,8 @@ const PageTransition = ({ children }) => (
 
 const page = (element) => <PageTransition>{element}</PageTransition>;
 
-const protectedPage = (element) => (
-  <ProtectedRoute>{page(element)}</ProtectedRoute>
+const protectedPage = (element, role) => (
+  <ProtectedRoute role={role}>{page(element)}</ProtectedRoute>
 );
 
 const App = () => {
@@ -83,6 +85,10 @@ const App = () => {
           {/* Pet profiles */}
           <Route path="/pets" element={protectedPage(<Pets />)} />
           <Route path="/pets/:petId" element={protectedPage(<PetProfile />)} />
+
+          {/* Clinic staff and admin tools */}
+          <Route path="/clinic" element={protectedPage(<ClinicDashboard />, "clinic")} />
+          <Route path="/admin" element={protectedPage(<AdminPanel />, "admin")} />
 
           <Route path="*" element={page(<InfoPage page="notFound" />)} />
         </Routes>

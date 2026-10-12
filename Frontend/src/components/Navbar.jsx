@@ -14,12 +14,25 @@ const navLinks = [
 
 const loginLink = { to: "/login", label: "Login" };
 
+// Clinic staff and admins get their own tools instead of the booking links.
+const linksByRole = {
+  clinic: [{ to: "/clinic", label: "Dashboard" }],
+  admin: [
+    { to: "/", label: "Home" },
+    { to: "/clinics", label: "Clinics" },
+    { to: "/bookings", label: "All Bookings" },
+    { to: "/admin", label: "Admin Panel" },
+  ],
+};
+
 function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const links = user ? navLinks : [...navLinks, loginLink];
+  const links = !user
+    ? [...navLinks, loginLink]
+    : (linksByRole[user.role] ?? navLinks);
 
   const handleLogout = () => {
     setIsOpen(false);

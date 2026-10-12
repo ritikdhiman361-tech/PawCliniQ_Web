@@ -8,6 +8,7 @@ import { petBasics, serviceType, visitType } from "../schemas.ts";
 import { bookingInclude, toBookingDto } from "../serializers.ts";
 import {
   BOOKING_WINDOW_DAYS,
+  fromInstant,
   istDatePlus,
   toInstant,
   vetSlots,
@@ -18,13 +19,21 @@ export const bookingsRouter = Router();
 bookingsRouter.use(requireAuth);
 
 const isAdmin = (user: User) => user.role === "admin";
+// Admins and clinic staff see owners' contact details and manage visits.
+const isStaff = (user: User) => user.role === "admin" || user.role === "clinic";
 
-// Admins can act on any booking; everyone else only on their own.
+// Which bookings a user may see: admins all, clinic staff their clinic's,
+// everyone else their own.
+const visibleTo = (user: User) =>
+  isAdmin(user)
+    ? {}
+    : user.role === "clinic"
+      ? { clinicId: user.clinicId ?? "-" }
+      : { userId: user.id };
+
 const findBooking = async (user: User, id: string) => {
   const booking = isUuid(id)
-    ? await prisma.booking.findFirst({
-        where: { id, ...(isAdmin(user) ? {} : { userId: user.id }) },
-      })
+    ? await prisma.booking.findFirst({ where: { id, ...visibleTo(user) } })
     : null;
   if (!booking) throw new HttpError(404, "This booking no longer exists.");
   return booking;
@@ -32,20 +41,16 @@ const findBooking = async (user: User, id: string) => {
 
 const listQuery = z.object({ petId: z.uuid().optional() });
 
-// Admins see every booking; everyone else only their own. ?petId= narrows
-// to one pet's history.
+// ?petId= narrows to one pet's history.
 bookingsRouter.get("/", async (req, res) => {
   const user = requireUser(req);
   const { petId } = parse(listQuery, req.query);
   const bookings = await prisma.booking.findMany({
-    where: {
-      ...(isAdmin(user) ? {} : { userId: user.id }),
-      ...(petId && { petId }),
-    },
+    where: { ...visibleTo(user), ...(petId && { petId }) },
     include: bookingInclude,
     orderBy: { startsAt: "asc" },
   });
-  res.json({ bookings: bookings.map((b) => toBookingDto(b, isAdmin(user))) });
+  res.json({ bookings: bookings.map((b) => toBookingDto(b, isStaff(user))) });
 });
 
 const createSchema = z.object({
@@ -70,7 +75,9 @@ bookingsRouter.post("/", async (req, res) => {
     where: { id: input.vetId },
     include: { clinic: true },
   });
-  if (!vet) throw new HttpError(400, "That veterinarian is no longer available.");
+  if (!vet || !vet.active || !vet.clinic.active) {
+    throw new HttpError(400, "That veterinarian is no longer available.");
+  }
   if (!vet.clinic.services.includes(input.serviceType)) {
     throw new HttpError(400, `${vet.clinic.name} doesn't offer this appointment type.`);
   }
@@ -127,7 +134,7 @@ bookingsRouter.post("/", async (req, res) => {
       await tx.bookingDraft.deleteMany({ where: { userId: user.id } });
       return created;
     });
-    res.status(201).json({ booking: toBookingDto(booking, isAdmin(user)) });
+    res.status(201).json({ booking: toBookingDto(booking, isStaff(user)) });
   } catch (err) {
     // The bookings_one_per_slot index: someone else got there first.
     if (isUniqueViolation(err)) {
@@ -137,27 +144,59 @@ bookingsRouter.post("/", async (req, res) => {
   }
 });
 
+const cancelSchema = z.object({
+  reason: z.string().trim().max(300, "Reason is too long.").optional().default(""),
+});
+
 bookingsRouter.patch("/:id/cancel", async (req, res) => {
   const user = requireUser(req);
+  const { reason } = parse(cancelSchema, req.body ?? {});
   const booking = await findBooking(user, req.params.id);
-  if (booking.status === "cancelled") {
-    throw new HttpError(409, "This booking is already cancelled.");
+  if (booking.status !== "confirmed") {
+    throw new HttpError(409, "Only confirmed appointments can be cancelled.");
   }
   if (booking.startsAt <= new Date()) {
     throw new HttpError(409, "Past appointments can't be cancelled.");
   }
   const updated = await prisma.booking.update({
     where: { id: booking.id },
-    data: { status: "cancelled" },
+    data: { status: "cancelled", cancelReason: isStaff(user) ? reason || null : null },
     include: bookingInclude,
   });
-  res.json({ booking: toBookingDto(updated, isAdmin(user)) });
+  res.json({ booking: toBookingDto(updated, isStaff(user)) });
+});
+
+const outcomeSchema = z.object({
+  status: z.enum(["completed", "no_show"], "Choose completed or no-show."),
+});
+
+// The clinic records how the visit went, from the day of the appointment.
+bookingsRouter.patch("/:id/status", async (req, res) => {
+  const user = requireUser(req);
+  if (!isStaff(user)) throw new HttpError(403, "Only the clinic can update a visit.");
+  const { status } = parse(outcomeSchema, req.body);
+  const booking = await findBooking(user, req.params.id);
+  if (booking.status === "cancelled") {
+    throw new HttpError(409, "This appointment was cancelled.");
+  }
+  if (fromInstant(booking.startsAt).date > istDatePlus(0)) {
+    throw new HttpError(409, "You can update a visit from the day of the appointment.");
+  }
+  const updated = await prisma.booking.update({
+    where: { id: booking.id },
+    data: { status },
+    include: bookingInclude,
+  });
+  res.json({ booking: toBookingDto(updated, true) });
 });
 
 // Removing from history is only for cancelled or past bookings; an upcoming
 // appointment has to be cancelled first so the clinic isn't left guessing.
 bookingsRouter.delete("/:id", async (req, res) => {
-  const booking = await findBooking(requireUser(req), req.params.id);
+  const user = requireUser(req);
+  // A clinic keeps its visit history; only owners and admins remove bookings.
+  if (user.role === "clinic") throw new HttpError(403, "Clinics can't delete bookings.");
+  const booking = await findBooking(user, req.params.id);
   if (booking.status === "confirmed" && booking.startsAt > new Date()) {
     throw new HttpError(409, "Cancel this appointment before removing it.");
   }

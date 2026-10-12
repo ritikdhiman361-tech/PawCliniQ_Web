@@ -48,6 +48,7 @@ authRouter.post("/signup", authLimiter, async (req, res) => {
   try {
     const user = await prisma.user.create({
       data: { ...details, passwordHash, pets: { create: pet } },
+      include: { clinic: true },
     });
     startSession(res, user.id);
     res.status(201).json({ user: toUserDto(user) });
@@ -61,7 +62,7 @@ authRouter.post("/signup", authLimiter, async (req, res) => {
 
 authRouter.post("/login", authLimiter, async (req, res) => {
   const { email, password } = parse(loginSchema, req.body);
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findUnique({ where: { email }, include: { clinic: true } });
   // Same message either way, so the form doesn't reveal which emails exist.
   if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
     throw new HttpError(401, "Incorrect email or password.");

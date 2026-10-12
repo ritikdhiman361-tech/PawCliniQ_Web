@@ -6,6 +6,7 @@ import { loadUser } from "./auth.ts";
 import { config } from "./config.ts";
 import { prisma } from "./db.ts";
 import { HttpError, errorHandler } from "./http.ts";
+import { adminRouter } from "./routes/admin.ts";
 import { authRouter } from "./routes/auth.ts";
 import { bookingDraftRouter } from "./routes/bookingDraft.ts";
 import { bookingsRouter } from "./routes/bookings.ts";
@@ -32,6 +33,7 @@ app.get("/api/health", async (_req, res) => {
 });
 
 app.use("/api/auth", authRouter);
+app.use("/api/admin", adminRouter);
 app.use("/api/pets", petsRouter);
 app.use("/api/clinics", clinicsRouter);
 app.use("/api/vets", vetsRouter);
